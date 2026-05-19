@@ -9,7 +9,8 @@ from fastapi.responses import StreamingResponse, JSONResponse
 from sqlmodel import select
 
 from database import get_session
-from models.db import Project, Task
+from dependencies import get_current_user, get_owned_project
+from models.db import Project, Task, User
 from models.enums import SDLCPhase, TaskStatus
 from services.file_parser import merge_outputs, detect_project_type, default_start_command, parse_output
 
@@ -77,10 +78,8 @@ def _readme(project: Project, tasks: list[Task], project_type: str, start_cmd: s
     return "\n".join(lines) + "\n"
 
 
-async def _load(project_id: str, session: Any) -> tuple[Project, list[Task]]:
-    proj = (await session.exec(select(Project).where(Project.id == project_id))).first()
-    if not proj:
-        raise HTTPException(status_code=404, detail="Project not found")
+async def _load(project_id: str, current_user: User, session: Any) -> tuple[Project, list[Task]]:
+    proj = await get_owned_project(project_id, current_user, session)
     tasks = list(
         (await session.exec(
             select(Task).where(Task.project_id == project_id).order_by(Task.created_at.asc())
@@ -93,8 +92,9 @@ async def _load(project_id: str, session: Any) -> tuple[Project, list[Task]]:
 async def download_project_zip(
     project_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    project, tasks = await _load(project_id, session)
+    project, tasks = await _load(project_id, current_user, session)
 
     # Collect implementation outputs and parse actual source files
     impl_outputs = [
@@ -138,13 +138,14 @@ async def download_doc(
     project_id: str,
     doc_type: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
     if doc_type not in _DOC_PHASES:
         raise HTTPException(
             status_code=404,
             detail=f"Unknown doc type '{doc_type}'. Use: requirements, architecture, design",
         )
-    project, tasks = await _load(project_id, session)
+    project, tasks = await _load(project_id, current_user, session)
     phases = _DOC_PHASES[doc_type]
     sections = [f"# {project.name} — {doc_type.capitalize()}\n"]
     for phase in phases:
@@ -163,9 +164,9 @@ async def download_doc(
 async def preview_info(
     project_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> JSONResponse:
-    """Return project type, files, and start command for the frontend preview."""
-    project, tasks = await _load(project_id, session)
+    project, tasks = await _load(project_id, current_user, session)
 
     all_outputs = [t.output for t in tasks if t.status == TaskStatus.DONE and t.output]
     merged = merge_outputs(all_outputs)

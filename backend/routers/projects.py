@@ -8,7 +8,8 @@ from sqlmodel import select
 from sqlalchemy import func
 
 from database import get_session, async_session_factory
-from models.db import Project, Agent, Task, AgentMessage, AgentTemplate
+from dependencies import get_current_user
+from models.db import Project, Agent, Task, AgentMessage, AgentTemplate, User
 from models.enums import AgentRole, SDLCPhase
 from models.schemas import (
     AgentMessageSchema,
@@ -28,8 +29,9 @@ router = APIRouter()
 async def create_project(
     body: CreateProjectRequest,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectDetailSchema:
-    project = Project(name=body.name, description=body.description)
+    project = Project(name=body.name, description=body.description, user_id=current_user.id)
     session.add(project)
     await session.commit()
     await session.refresh(project)
@@ -98,8 +100,13 @@ async def create_project(
 @router.get("/", response_model=dict)
 async def list_projects(
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> dict:
-    result = await session.exec(select(Project).order_by(Project.created_at.desc()))
+    result = await session.exec(
+        select(Project)
+        .where(Project.user_id == current_user.id)
+        .order_by(Project.created_at.desc())
+    )
     projects = result.all()
 
     # Fetch all counts in two queries (GROUP BY) instead of 2N per-project queries
@@ -134,11 +141,14 @@ async def list_projects(
 async def get_project(
     project_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> ProjectDetailSchema:
     result = await session.exec(select(Project).where(Project.id == project_id))
     project = result.first()
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
+    if project.user_id is not None and project.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     agents_result = await session.exec(
         select(Agent)

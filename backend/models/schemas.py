@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator
 
 from models.enums import (
     SDLCPhase,
@@ -18,6 +18,46 @@ from models.enums import (
 # Response schemas
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Auth schemas
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("password must be at least 8 characters")
+        return v
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user_id: str
+    email: str
+
+
+class UserSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
 class AgentTemplateSchema(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,6 +65,7 @@ class AgentTemplateSchema(BaseModel):
     role: AgentRole
     specialization: str
     model_name: str
+    system_prompt: Optional[str] = None
     is_active: bool
     created_at: datetime
 

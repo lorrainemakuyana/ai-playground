@@ -15,6 +15,18 @@ def _new_uuid() -> str:
     return str(uuid.uuid4())
 
 
+class User(SQLModel, table=True):
+    __tablename__ = "users"
+
+    id: str = Field(default_factory=_new_uuid, primary_key=True)
+    email: str = Field(unique=True, index=True)
+    password_hash: str
+    token_version: int = Field(default=1)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+    projects: List["Project"] = Relationship(back_populates="owner")
+
+
 class AgentTemplate(SQLModel, table=True):
     """Global default engineering team — copied into every new project."""
     __tablename__ = "agent_templates"
@@ -37,7 +49,9 @@ class Project(SQLModel, table=True):
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
     current_phase: SDLCPhase = Field(default=SDLCPhase.DISCOVERY)
     created_at: datetime = Field(default_factory=_utcnow)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
 
+    owner: Optional["User"] = Relationship(back_populates="projects")
     agents: List["Agent"] = Relationship(back_populates="project")
     tasks: List["Task"] = Relationship(back_populates="project")
     messages: List["AgentMessage"] = Relationship(back_populates="project")

@@ -4,16 +4,50 @@ const API_BASE =
     ? (process.env.API_URL ?? 'http://localhost:8000')
     : '/api'
 
+function getStoredToken(): string | null {
+  if (typeof document === 'undefined') return null
+  const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
 async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = getStoredToken()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
   })
+
+  if (res.status === 401) {
+    if (typeof window !== 'undefined') window.location.href = '/auth'
+    throw new Error('Session expired. Please log in again.')
+  }
+
   if (!res.ok) {
     const error = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(error.detail ?? 'Request failed')
   }
   return res.json()
+}
+
+export async function register(email: string, password: string) {
+  return fetchJSON<{ access_token: string; user_id: string; email: string }>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function login(email: string, password: string) {
+  return fetchJSON<{ access_token: string; user_id: string; email: string }>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function logout() {
+  return fetchJSON<void>('/auth/logout', { method: 'POST' })
 }
 
 export async function getProjects(): Promise<{ projects: import('@/types').ProjectSummary[] }> {
@@ -102,4 +136,16 @@ export async function sendDirective(projectId: string, content: string) {
     method: 'POST',
     body: JSON.stringify({ content }),
   })
+}
+
+export interface PreviewInfo {
+  project_type: string
+  is_web: boolean
+  start_command: string
+  files: Record<string, string>
+  file_count: number
+}
+
+export async function getPreviewInfo(projectId: string): Promise<PreviewInfo> {
+  return fetchJSON<PreviewInfo>(`/projects/${projectId}/preview-info`)
 }

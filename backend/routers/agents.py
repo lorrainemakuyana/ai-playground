@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 
 from database import get_session
-from models.db import Project, Agent
+from dependencies import get_current_user, get_owned_project
+from models.db import Agent, User
 from models.schemas import AgentSchema, CreateAgentRequest, UpdateAgentRequest
 import services.prompt_builder as prompt_builder
 
@@ -18,11 +18,9 @@ router = APIRouter()
 async def list_agents(
     project_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> list[AgentSchema]:
-    result = await session.exec(select(Project).where(Project.id == project_id))
-    if not result.first():
-        raise HTTPException(status_code=404, detail="Project not found")
-
+    await get_owned_project(project_id, current_user, session)
     result = await session.exec(
         select(Agent)
         .where(Agent.project_id == project_id, Agent.is_archived == False)
@@ -36,18 +34,14 @@ async def create_agent(
     project_id: str,
     body: CreateAgentRequest,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> AgentSchema:
-    result = await session.exec(select(Project).where(Project.id == project_id))
-    project = result.first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-
+    project = await get_owned_project(project_id, current_user, session)
     system_prompt = body.system_prompt or prompt_builder.build_system_prompt(
         role=body.role,
         specialization=body.specialization,
         project=project,
     )
-
     agent = Agent(
         project_id=project_id,
         role=body.role,
@@ -68,7 +62,9 @@ async def update_agent(
     agent_id: str,
     body: UpdateAgentRequest,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> AgentSchema:
+    await get_owned_project(project_id, current_user, session)
     result = await session.exec(
         select(Agent).where(Agent.id == agent_id, Agent.project_id == project_id)
     )
@@ -96,7 +92,9 @@ async def archive_agent(
     project_id: str,
     agent_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> None:
+    await get_owned_project(project_id, current_user, session)
     result = await session.exec(
         select(Agent).where(Agent.id == agent_id, Agent.project_id == project_id)
     )

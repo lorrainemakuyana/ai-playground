@@ -7,7 +7,13 @@ from sqlalchemy.pool import StaticPool
 from sqlmodel.ext.asyncio.session import AsyncSession
 from unittest.mock import AsyncMock, patch, MagicMock
 
+# Import all models so SQLModel.metadata knows about every table before create_all.
+import models.db  # noqa: F401
+
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+
+_TEST_USER_ID = "test-user-00000000"
+_TEST_USER_EMAIL = "test@example.com"
 
 
 @pytest_asyncio.fixture
@@ -46,8 +52,42 @@ def _make_null_session_factory():
     return factory
 
 
+def _make_client_context(app, factory):
+    from database import get_session
+    from dependencies import get_current_user
+    from models.db import User
+
+    mock_user = User(id=_TEST_USER_ID, email=_TEST_USER_EMAIL, password_hash="irrelevant")
+
+    async def override_get_session():
+        async with factory() as session:
+            yield session
+
+    async def override_get_current_user():
+        return mock_user
+
+    app.dependency_overrides[get_session] = override_get_session
+    app.dependency_overrides[get_current_user] = override_get_current_user
+
+
 @pytest_asyncio.fixture
 async def client(test_engine):
+    from main import app
+
+    factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    _make_client_context(app, factory)
+
+    with patch("services.orchestrator.start_project", new_callable=AsyncMock), \
+         patch("routers.projects.async_session_factory", _make_null_session_factory()):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+            yield ac
+
+    app.dependency_overrides.clear()
+
+
+@pytest_asyncio.fixture
+async def raw_client(test_engine):
+    """Client with real get_current_user — use for testing auth endpoints."""
     from database import get_session
     from main import app
 
@@ -59,9 +99,6 @@ async def client(test_engine):
 
     app.dependency_overrides[get_session] = override_get_session
 
-    # Prevent fire-and-forget orchestration from hitting real DB or Anthropic API.
-    # Mock at the orchestrator level rather than patching asyncio.create_task globally,
-    # which would break SQLAlchemy's internal session cleanup.
     with patch("services.orchestrator.start_project", new_callable=AsyncMock), \
          patch("routers.projects.async_session_factory", _make_null_session_factory()):
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:

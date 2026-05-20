@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from dataclasses import dataclass, field
 
@@ -27,7 +28,9 @@ def parse_output(text: str) -> ParsedProject:
     result = ParsedProject()
 
     for match in _FILE_RE.finditer(text):
-        path = match.group(1).strip().lstrip("/")
+        path = os.path.normpath(match.group(1).strip().lstrip("/"))
+        if path.startswith(".."):
+            continue
         content = match.group(2)
         result.files[path] = content
 

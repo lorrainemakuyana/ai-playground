@@ -26,6 +26,9 @@ _MIGRATIONS = [
     "ALTER TABLE agents ADD COLUMN is_template_agent INTEGER NOT NULL DEFAULT 0",
     "ALTER TABLE agents ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0",
     "UPDATE agent_templates SET model_name = 'claude-opus-4-6' WHERE role = 'TECH_LEAD'",
+    # Auth migrations
+    "ALTER TABLE projects ADD COLUMN user_id TEXT REFERENCES users(id)",
+    "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 1",
 ]
 
 _DEFAULT_TEMPLATES = [

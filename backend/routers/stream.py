@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import select
 
 from database import get_session
-from models.db import Project
+from dependencies import get_current_user, get_owned_project
+from models.db import User
 import services.orchestrator as orchestrator
 
 router = APIRouter()
@@ -17,12 +18,9 @@ router = APIRouter()
 async def stream_project_events(
     project_id: str,
     session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    # Verify project exists
-    result = await session.exec(select(Project).where(Project.id == project_id))
-    project = result.first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    await get_owned_project(project_id, current_user, session)
 
     return StreamingResponse(
         orchestrator.stream_events(project_id),

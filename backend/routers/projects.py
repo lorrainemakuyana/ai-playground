@@ -8,8 +8,8 @@ from sqlmodel import select
 from sqlalchemy import func
 
 from database import get_session, async_session_factory
-from dependencies import get_current_user
-from models.db import Project, Agent, Task, AgentMessage, AgentTemplate, User
+from dependencies import get_accessible_project, get_current_user, get_owned_project
+from models.db import Project, Agent, Task, AgentMessage, AgentTemplate, ProjectShare, User
 from models.enums import AgentRole, SDLCPhase
 from models.schemas import (
     AgentMessageSchema,
@@ -19,13 +19,14 @@ from models.schemas import (
     ProjectSummarySchema,
     TaskSchema,
 )
+from datetime import datetime, timezone
 import services.orchestrator as orchestrator
 import services.prompt_builder as prompt_builder
 
 router = APIRouter()
 
 
-@router.post("/", status_code=status.HTTP_201_CREATED, response_model=ProjectDetailSchema)
+@router.post("", status_code=status.HTTP_201_CREATED, response_model=ProjectDetailSchema)
 async def create_project(
     body: CreateProjectRequest,
     session: Any = Depends(get_session),
@@ -97,19 +98,31 @@ async def create_project(
 
 
 
-@router.get("/", response_model=dict)
+@router.get("", response_model=dict)
 async def list_projects(
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> dict:
-    result = await session.exec(
+    # Own projects
+    own_result = await session.exec(
         select(Project)
         .where(Project.user_id == current_user.id)
         .order_by(Project.created_at.desc())
     )
-    projects = result.all()
+    own_projects = own_result.all()
 
-    # Fetch all counts in two queries (GROUP BY) instead of 2N per-project queries
+    # Projects shared with the current user (active + revoked)
+    shares_result = await session.exec(
+        select(ProjectShare, Project)
+        .join(Project, ProjectShare.project_id == Project.id)
+        .where(ProjectShare.user_id == current_user.id)
+        .order_by(ProjectShare.created_at.desc())
+    )
+    share_rows = shares_result.all()
+
+    # Collect all project IDs to fetch counts in bulk
+    all_project_ids = [p.id for p in own_projects] + [p.id for _, p in share_rows]
+
     agent_counts_result = await session.exec(
         select(Agent.project_id, func.count(Agent.id)).group_by(Agent.project_id)
     )
@@ -120,19 +133,50 @@ async def list_projects(
     )
     task_counts: dict[str, int] = dict(task_counts_result.all())
 
+    # Collaborator counts for own projects
+    collab_counts_result = await session.exec(
+        select(ProjectShare.project_id, func.count(ProjectShare.id))
+        .where(
+            ProjectShare.revoked_at == None,  # noqa: E711
+            ProjectShare.joined_at != None,  # noqa: E711
+        )
+        .group_by(ProjectShare.project_id)
+    )
+    collab_counts: dict[str, int] = dict(collab_counts_result.all())
+
     summaries: list[ProjectSummarySchema] = []
-    for project in projects:
-        summary = ProjectSummarySchema(
+
+    for project in own_projects:
+        summaries.append(ProjectSummarySchema(
             id=project.id,
             name=project.name,
             description=project.description,
             status=project.status,
             current_phase=project.current_phase,
             created_at=project.created_at,
+            archived_at=project.archived_at,
             agent_count=agent_counts.get(project.id, 0),
             task_count=task_counts.get(project.id, 0),
-        )
-        summaries.append(summary)
+            is_owner=True,
+            collaborator_count=collab_counts.get(project.id, 0),
+        ))
+
+    for share, project in share_rows:
+        summaries.append(ProjectSummarySchema(
+            id=project.id,
+            name=project.name,
+            description=project.description,
+            status=project.status,
+            current_phase=project.current_phase,
+            created_at=project.created_at,
+            archived_at=project.archived_at,
+            agent_count=agent_counts.get(project.id, 0),
+            task_count=task_counts.get(project.id, 0),
+            is_owner=False,
+            collaborator_count=0,
+            share_status="revoked" if share.revoked_at else "active",
+            share_id=share.id,
+        ))
 
     return {"projects": summaries}
 
@@ -143,12 +187,7 @@ async def get_project(
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> ProjectDetailSchema:
-    result = await session.exec(select(Project).where(Project.id == project_id))
-    project = result.first()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if project.user_id is not None and project.user_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Access denied")
+    project = await get_accessible_project(project_id, current_user, session)
 
     agents_result = await session.exec(
         select(Agent)
@@ -179,7 +218,91 @@ async def get_project(
         status=project.status,
         current_phase=project.current_phase,
         created_at=project.created_at,
+        is_owner=(project.user_id is None or project.user_id == current_user.id),
         agents=[AgentSchema.model_validate(a) for a in agents],
         tasks=[TaskSchema.model_validate(t) for t in tasks],
         messages=[AgentMessageSchema.model_validate(m) for m in messages],
     )
+
+
+@router.patch("/{project_id}/archive", response_model=ProjectSummarySchema)
+async def archive_project(
+    project_id: str,
+    session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ProjectSummarySchema:
+    project = await get_owned_project(project_id, current_user, session)
+    if project.archived_at is not None:
+        raise HTTPException(status_code=409, detail="Project is already archived")
+    project.archived_at = datetime.now(timezone.utc)
+    session.add(project)
+    await session.commit()
+    await session.refresh(project)
+    return ProjectSummarySchema(
+        id=project.id,
+        name=project.name,
+        description=project.description,
+        status=project.status,
+        current_phase=project.current_phase,
+        created_at=project.created_at,
+        archived_at=project.archived_at,
+        agent_count=0,
+        task_count=0,
+        is_owner=True,
+    )
+
+
+@router.patch("/{project_id}/unarchive", response_model=ProjectSummarySchema)
+async def unarchive_project(
+    project_id: str,
+    session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> ProjectSummarySchema:
+    project = await get_owned_project(project_id, current_user, session)
+    if project.archived_at is None:
+        raise HTTPException(status_code=409, detail="Project is not archived")
+    project.archived_at = None
+    session.add(project)
+    await session.commit()
+    await session.refresh(project)
+    return ProjectSummarySchema(
+        id=project.id,
+        name=project.name,
+        description=project.description,
+        status=project.status,
+        current_phase=project.current_phase,
+        created_at=project.created_at,
+        archived_at=None,
+        agent_count=0,
+        task_count=0,
+        is_owner=True,
+    )
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_project(
+    project_id: str,
+    session: Any = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    project = await get_owned_project(project_id, current_user, session)
+    if project.archived_at is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Project must be archived before it can be permanently deleted",
+        )
+    # Hard delete — cascade via FK or explicit deletes
+    from sqlmodel import delete as sql_delete
+    from models.db import AgentMessage, ProjectShare, ProjectShareLink, Task, Agent
+
+    for model, col in [
+        (AgentMessage, AgentMessage.project_id),
+        (ProjectShare, ProjectShare.project_id),
+        (ProjectShareLink, ProjectShareLink.project_id),
+        (Task, Task.project_id),
+        (Agent, Agent.project_id),
+    ]:
+        await session.exec(sql_delete(model).where(col == project_id))
+
+    await session.delete(project)
+    await session.commit()

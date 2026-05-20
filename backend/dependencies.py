@@ -7,7 +7,7 @@ from jose import JWTError
 from sqlmodel import select
 
 from database import get_session
-from models.db import Project, User
+from models.db import Project, ProjectShare, User
 from services.auth_service import decode_token
 
 
@@ -55,3 +55,30 @@ async def get_owned_project(
     if project.user_id is not None and project.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return project
+
+
+async def get_accessible_project(
+    project_id: str,
+    current_user: User,
+    session: Any,
+) -> Project:
+    """Fetch a project accessible to the current user (owner or active collaborator)."""
+    result = await session.exec(select(Project).where(Project.id == project_id))
+    project = result.first()
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+
+    if project.user_id is None or project.user_id == current_user.id:
+        return project
+
+    share_result = await session.exec(
+        select(ProjectShare).where(
+            ProjectShare.project_id == project_id,
+            ProjectShare.user_id == current_user.id,
+            ProjectShare.revoked_at == None,  # noqa: E711
+        )
+    )
+    if share_result.first():
+        return project
+
+    raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")

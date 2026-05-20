@@ -29,6 +29,7 @@ async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
     const error = await res.json().catch(() => ({ detail: res.statusText }))
     throw new Error(error.detail ?? 'Request failed')
   }
+  if (res.status === 204) return undefined as T
   return res.json()
 }
 
@@ -148,4 +149,49 @@ export interface PreviewInfo {
 
 export async function getPreviewInfo(projectId: string): Promise<PreviewInfo> {
   return fetchJSON<PreviewInfo>(`/projects/${projectId}/preview-info`)
+}
+
+// Sharing
+export async function getShares(projectId: string): Promise<import('@/types').ProjectShare[]> {
+  return fetchJSON<import('@/types').ProjectShare[]>(`/projects/${projectId}/shares`)
+}
+
+export async function inviteByEmail(projectId: string, email: string): Promise<import('@/types').ProjectShare> {
+  return fetchJSON<import('@/types').ProjectShare>(`/projects/${projectId}/shares`, {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+export async function revokeShare(projectId: string, shareId: string): Promise<void> {
+  return fetchJSON<void>(`/projects/${projectId}/shares/${shareId}`, { method: 'DELETE' })
+}
+
+export async function removeMyShare(projectId: string): Promise<void> {
+  return fetchJSON<void>(`/projects/${projectId}/my-share`, { method: 'DELETE' })
+}
+
+export async function getShareLink(projectId: string): Promise<import('@/types').ShareLink> {
+  return fetchJSON<import('@/types').ShareLink>(`/projects/${projectId}/share-link`, { method: 'POST' })
+}
+
+export async function revokeShareLink(projectId: string): Promise<void> {
+  return fetchJSON<void>(`/projects/${projectId}/share-link`, { method: 'DELETE' })
+}
+
+export async function joinViaLink(token: string): Promise<{ project_id: string }> {
+  return fetchJSON<{ project_id: string }>(`/projects/join/${token}`, { method: 'POST' })
+}
+
+// Project lifecycle
+export async function archiveProject(projectId: string): Promise<import('@/types').ProjectSummary> {
+  return fetchJSON<import('@/types').ProjectSummary>(`/projects/${projectId}/archive`, { method: 'PATCH' })
+}
+
+export async function unarchiveProject(projectId: string): Promise<import('@/types').ProjectSummary> {
+  return fetchJSON<import('@/types').ProjectSummary>(`/projects/${projectId}/unarchive`, { method: 'PATCH' })
+}
+
+export async function deleteProject(projectId: string): Promise<void> {
+  return fetchJSON<void>(`/projects/${projectId}`, { method: 'DELETE' })
 }

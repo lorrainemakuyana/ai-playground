@@ -25,6 +25,7 @@ class User(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
 
     projects: List["Project"] = Relationship(back_populates="owner")
+    shares: List["ProjectShare"] = Relationship(back_populates="user")
 
 
 class AgentTemplate(SQLModel, table=True):
@@ -49,12 +50,14 @@ class Project(SQLModel, table=True):
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
     current_phase: SDLCPhase = Field(default=SDLCPhase.DISCOVERY)
     created_at: datetime = Field(default_factory=_utcnow)
+    archived_at: Optional[datetime] = Field(default=None)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
 
     owner: Optional["User"] = Relationship(back_populates="projects")
     agents: List["Agent"] = Relationship(back_populates="project")
     tasks: List["Task"] = Relationship(back_populates="project")
     messages: List["AgentMessage"] = Relationship(back_populates="project")
+    shares: List["ProjectShare"] = Relationship(back_populates="project")
 
 
 class Agent(SQLModel, table=True):
@@ -128,3 +131,28 @@ class AgentMessage(SQLModel, table=True):
             "lazy": "select",
         }
     )
+
+
+class ProjectShare(SQLModel, table=True):
+    __tablename__ = "project_shares"
+
+    id: str = Field(default_factory=_new_uuid, primary_key=True)
+    project_id: str = Field(foreign_key="projects.id", index=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    invited_email: str = Field(index=True)
+    invite_method: str = Field(default="email")  # "email" | "link"
+    joined_at: Optional[datetime] = Field(default=None)
+    revoked_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=_utcnow)
+
+    project: Optional[Project] = Relationship(back_populates="shares")
+    user: Optional[User] = Relationship(back_populates="shares")
+
+
+class ProjectShareLink(SQLModel, table=True):
+    __tablename__ = "project_share_links"
+
+    id: str = Field(default_factory=_new_uuid, primary_key=True)
+    project_id: str = Field(foreign_key="projects.id", unique=True, index=True)
+    token: str = Field(unique=True, index=True)
+    created_at: datetime = Field(default_factory=_utcnow)

@@ -119,6 +119,7 @@ class ProjectDetailSchema(BaseModel):
     status: ProjectStatus
     current_phase: SDLCPhase
     created_at: datetime
+    is_owner: bool = True
     agents: List[AgentSchema] = []
     tasks: List[TaskSchema] = []
     messages: List[AgentMessageSchema] = []
@@ -133,8 +134,35 @@ class ProjectSummarySchema(BaseModel):
     status: ProjectStatus
     current_phase: SDLCPhase
     created_at: datetime
+    archived_at: Optional[datetime] = None
     agent_count: int
     task_count: int
+    # Sharing metadata
+    is_owner: bool = True
+    collaborator_count: int = 0
+    share_status: Optional[str] = None   # None (own) | "active" | "revoked"
+    share_id: Optional[str] = None       # ProjectShare.id for collaborator's own share record
+
+
+class ProjectShareSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    user_id: Optional[str] = None
+    invited_email: str
+    invite_method: str
+    joined_at: Optional[datetime] = None
+    revoked_at: Optional[datetime] = None
+    created_at: datetime
+
+
+class ShareLinkSchema(BaseModel):
+    id: str
+    project_id: str
+    token: str
+    url: str
+    created_at: datetime
 
 
 # ---------------------------------------------------------------------------
@@ -231,3 +259,7 @@ class DirectiveRequest(BaseModel):
         if not v:
             raise ValueError("content is required")
         return v
+
+
+class InviteByEmailRequest(BaseModel):
+    email: EmailStr

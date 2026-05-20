@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlmodel import select
 
 from database import get_session
-from dependencies import get_current_user, get_owned_project
+from dependencies import get_accessible_project, get_current_user
 from models.db import User
 import services.orchestrator as orchestrator
 
@@ -20,7 +20,7 @@ async def stream_project_events(
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> StreamingResponse:
-    await get_owned_project(project_id, current_user, session)
+    await get_accessible_project(project_id, current_user, session)
 
     return StreamingResponse(
         orchestrator.stream_events(project_id),

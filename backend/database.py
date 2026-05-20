@@ -29,6 +29,24 @@ _MIGRATIONS = [
     # Auth migrations
     "ALTER TABLE projects ADD COLUMN user_id TEXT REFERENCES users(id)",
     "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 1",
+    # Sharing + archiving migrations
+    "ALTER TABLE projects ADD COLUMN archived_at TEXT",
+    """CREATE TABLE IF NOT EXISTS project_shares (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL REFERENCES projects(id),
+        user_id TEXT REFERENCES users(id),
+        invited_email TEXT NOT NULL,
+        invite_method TEXT NOT NULL DEFAULT 'email',
+        joined_at TEXT,
+        revoked_at TEXT,
+        created_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS project_share_links (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL UNIQUE REFERENCES projects(id),
+        token TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL
+    )""",
 ]
 
 _DEFAULT_TEMPLATES = [

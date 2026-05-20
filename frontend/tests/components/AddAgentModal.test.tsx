@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import AddAgentModal from './AddAgentModal'
+import AddAgentModal from '@/components/AddAgentModal'
 
 const defaultProps = {
   isOpen: true,

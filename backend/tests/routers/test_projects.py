@@ -4,7 +4,7 @@ VALID_PROJECT = {"name": "Test Project", "description": "A test project descript
 
 
 async def test_create_project_success(client):
-    resp = await client.post("/projects/", json=VALID_PROJECT)
+    resp = await client.post("/projects", json=VALID_PROJECT)
     assert resp.status_code == 201
     data = resp.json()
     assert data["name"] == VALID_PROJECT["name"]
@@ -14,24 +14,24 @@ async def test_create_project_success(client):
 
 
 async def test_create_project_name_too_short(client):
-    resp = await client.post("/projects/", json={"name": "", "description": "A valid description here"})
+    resp = await client.post("/projects", json={"name": "", "description": "A valid description here"})
     assert resp.status_code == 422
 
 
 async def test_create_project_description_too_short(client):
-    resp = await client.post("/projects/", json={"name": "Test", "description": "short"})
+    resp = await client.post("/projects", json={"name": "Test", "description": "short"})
     assert resp.status_code == 422
 
 
 async def test_list_projects_empty(client):
-    resp = await client.get("/projects/")
+    resp = await client.get("/projects")
     assert resp.status_code == 200
     assert resp.json() == {"projects": []}
 
 
 async def test_list_projects_returns_summary(client):
-    await client.post("/projects/", json=VALID_PROJECT)
-    resp = await client.get("/projects/")
+    await client.post("/projects", json=VALID_PROJECT)
+    resp = await client.get("/projects")
     assert resp.status_code == 200
     projects = resp.json()["projects"]
     assert len(projects) == 1
@@ -41,7 +41,7 @@ async def test_list_projects_returns_summary(client):
 
 
 async def test_get_project_success(client):
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project_id = create_resp.json()["id"]
     resp = await client.get(f"/projects/{project_id}")
     assert resp.status_code == 200

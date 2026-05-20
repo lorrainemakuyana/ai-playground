@@ -8,7 +8,7 @@ async def _create_project_with_task(client, test_session):
     """Helper: create project and insert a task directly via session."""
     from models.db import Task
 
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project = create_resp.json()
     project_id = project["id"]
 
@@ -26,7 +26,7 @@ async def _create_project_with_task(client, test_session):
 
 
 async def test_list_tasks_empty(client):
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project_id = create_resp.json()["id"]
     resp = await client.get(f"/projects/{project_id}/tasks")
     assert resp.status_code == 200
@@ -71,7 +71,7 @@ async def test_update_task_no_fields(client, test_session):
 
 
 async def test_update_task_not_found(client):
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project_id = create_resp.json()["id"]
     resp = await client.patch(
         f"/projects/{project_id}/tasks/nonexistent",

@@ -69,6 +69,7 @@ export interface Project {
   status: ProjectStatus
   current_phase: SDLCPhase
   created_at: string
+  is_owner: boolean
   agents: Agent[]
   tasks: Task[]
   messages: AgentMessage[]
@@ -77,11 +78,36 @@ export interface Project {
 export interface ProjectSummary {
   id: string
   name: string
+  description: string
   status: ProjectStatus
   current_phase: SDLCPhase
   created_at: string
+  archived_at: string | null
   agent_count: number
   task_count: number
+  is_owner: boolean
+  collaborator_count: number
+  share_status: 'active' | 'revoked' | null
+  share_id: string | null
+}
+
+export interface ProjectShare {
+  id: string
+  project_id: string
+  user_id: string | null
+  invited_email: string
+  invite_method: 'email' | 'link'
+  joined_at: string | null
+  revoked_at: string | null
+  created_at: string
+}
+
+export interface ShareLink {
+  id: string
+  project_id: string
+  token: string
+  url: string
+  created_at: string
 }
 
 export type SSEEvent =

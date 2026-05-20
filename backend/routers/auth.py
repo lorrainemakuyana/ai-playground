@@ -10,7 +10,7 @@ from sqlmodel import select
 
 from database import get_session
 from dependencies import get_current_user
-from models.db import User
+from models.db import ProjectShare, User
 from models.schemas import LoginRequest, RegisterRequest, TokenResponse, UserSchema
 from services.auth_service import create_access_token, hash_password, verify_password
 
@@ -50,6 +50,21 @@ async def register(
     session.add(user)
     await session.commit()
     await session.refresh(user)
+
+    # Activate any pending email invites for this address
+    pending_result = await session.exec(
+        select(ProjectShare).where(
+            ProjectShare.invited_email == user.email.lower(),
+            ProjectShare.user_id == None,  # noqa: E711
+            ProjectShare.revoked_at == None,  # noqa: E711
+        )
+    )
+    for pending in pending_result.all():
+        pending.user_id = user.id
+        pending.joined_at = user.created_at
+        session.add(pending)
+    if pending_result:
+        await session.commit()
 
     token = create_access_token(user.id, user.email, user.token_version)
     _set_auth_cookie(response, token)

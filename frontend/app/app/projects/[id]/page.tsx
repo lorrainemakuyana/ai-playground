@@ -11,6 +11,7 @@ import PhaseTracker from '@/components/PhaseTracker'
 import AgentCard from '@/components/AgentCard'
 import TaskFeed from '@/components/TaskFeed'
 import AgentOutputDrawer from '@/components/AgentOutputDrawer'
+import ShareModal from './_components/ShareModal'
 import Spinner from '@/components/Spinner'
 import StatusBadge from '@/components/StatusBadge'
 
@@ -32,6 +33,7 @@ export default function ProjectDashboardPage() {
 
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [shareOpen, setShareOpen] = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -198,6 +200,19 @@ export default function ProjectDashboardPage() {
           {project && <StatusBadge status={project.status} />}
         </div>
 
+        {tasks.some(t => t.status === 'done' && t.output) && (
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/projects/${projectId}/download`}
+            download
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-950 hover:bg-primary-900 border border-primary-800 text-primary-300 transition-colors flex-none"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download (.zip)
+          </a>
+        )}
+
         <Link
           href={`/app/projects/${projectId}/preview`}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors flex-none"
@@ -209,17 +224,16 @@ export default function ProjectDashboardPage() {
           Preview
         </Link>
 
-        {project?.status === 'done' && (
-          <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/projects/${projectId}/download`}
-            download
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-950 hover:bg-primary-900 border border-primary-800 text-primary-300 transition-colors flex-none"
+        {project?.is_owner && (
+          <button
+            onClick={() => setShareOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors flex-none"
           >
             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
             </svg>
-            Download (.zip)
-          </a>
+            Share
+          </button>
         )}
 
         {showResume && (
@@ -248,15 +262,17 @@ export default function ProjectDashboardPage() {
           </button>
         )}
 
-        <Link
-          href={`/app/projects/${projectId}/agents`}
-          className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors flex items-center gap-1 flex-none"
-        >
-          Manage Team
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
+        {project?.is_owner && (
+          <Link
+            href={`/app/projects/${projectId}/agents`}
+            className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors flex items-center gap-1 flex-none"
+          >
+            Manage Team
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
       </div>
 
       <PhaseTracker currentPhase={currentPhase} />
@@ -331,6 +347,10 @@ export default function ProjectDashboardPage() {
         onClose={closeDrawer}
         onTaskUpdate={handleTaskUpdate}
       />
+
+      {shareOpen && project?.is_owner && (
+        <ShareModal projectId={projectId} onClose={() => setShareOpen(false)} />
+      )}
     </div>
   )
 }

@@ -4,7 +4,7 @@ VALID_PROJECT = {"name": "Agent Test", "description": "Testing agent creation en
 
 
 async def test_add_agent_success(client):
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project_id = create_resp.json()["id"]
     resp = await client.post(
         f"/projects/{project_id}/agents",
@@ -27,7 +27,7 @@ async def test_add_agent_project_not_found(client):
 
 
 async def test_add_agent_specialization_required(client):
-    create_resp = await client.post("/projects/", json=VALID_PROJECT)
+    create_resp = await client.post("/projects", json=VALID_PROJECT)
     project_id = create_resp.json()["id"]
     resp = await client.post(
         f"/projects/{project_id}/agents",

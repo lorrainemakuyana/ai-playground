@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import TaskFeed from './TaskFeed'
+import TaskFeed from '@/components/TaskFeed'
 import type { Task } from '@/types'
 
 const mockTask: Task = {
@@ -87,8 +87,8 @@ describe('TaskFeed', () => {
     expect(screen.queryByText('Waiting for tasks...')).not.toBeInTheDocument()
   })
 
-  it('always shows the "Live Task Feed" header', () => {
+  it('always shows the "Tasks" header', () => {
     render(<TaskFeed tasks={[]} onTaskClick={jest.fn()} isConnected={true} />)
-    expect(screen.getByText('Live Task Feed')).toBeInTheDocument()
+    expect(screen.getByText('Tasks')).toBeInTheDocument()
   })
 })

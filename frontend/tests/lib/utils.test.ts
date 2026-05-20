@@ -1,4 +1,4 @@
-import { getInitials, agentBorderClass } from './utils'
+import { getInitials, agentBorderClass } from '@/lib/utils'
 
 describe('getInitials', () => {
   it('returns "TL" for "tech-lead"', () => {

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import AgentCard from './AgentCard'
+import AgentCard from '@/components/AgentCard'
 import type { Agent } from '@/types'
 
 const mockAgent: Agent = {

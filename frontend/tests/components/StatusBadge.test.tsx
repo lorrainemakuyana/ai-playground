@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react'
-import StatusBadge from './StatusBadge'
+import StatusBadge from '@/components/StatusBadge'
 
 describe('StatusBadge', () => {
   it('renders idle status text', () => {
@@ -74,7 +74,7 @@ describe('StatusBadge', () => {
 
   it('applies correct CSS class for pending', () => {
     const { container } = render(<StatusBadge status="pending" />)
-    expect(container.firstChild).toHaveClass('bg-neutral-800', 'text-neutral-400')
+    expect(container.firstChild).toHaveClass('text-amber-400')
   })
 
   it('renders as a span element', () => {

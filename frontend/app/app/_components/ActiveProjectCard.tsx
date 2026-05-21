@@ -34,13 +34,16 @@ export default function ActiveProjectCard({ project, onArchived }: Props) {
   const isDone = project.status === 'done'
   const [confirming, setConfirming] = useState(false)
   const [archiving, setArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState('')
 
   async function handleArchive() {
     setArchiving(true)
+    setArchiveError('')
     try {
       await archiveProject(project.id)
       onArchived(project.id)
-    } catch {
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : 'Failed to archive project')
       setConfirming(false)
     } finally {
       setArchiving(false)
@@ -99,7 +102,11 @@ export default function ActiveProjectCard({ project, onArchived }: Props) {
         </div>
       </Link>
 
-      <div className="px-4 py-2.5 border-t border-neutral-800 flex items-center gap-1 flex-wrap">
+      <div className="px-4 py-2.5 border-t border-neutral-800 flex flex-col gap-1">
+        {archiveError && (
+          <span className="text-xs text-red-400">{archiveError}</span>
+        )}
+        <div className="flex items-center gap-1 flex-wrap">
         <span className="text-xs text-neutral-600 mr-1">Download:</span>
         <DownloadLink href={`${base}/docs/requirements`} label="Requirements" />
         <DownloadLink href={`${base}/docs/architecture`} label="Architecture" />
@@ -155,6 +162,7 @@ export default function ActiveProjectCard({ project, onArchived }: Props) {
             </button>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

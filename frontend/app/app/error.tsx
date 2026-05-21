@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 
-export default function ProjectError({
+export default function AppError({
   error,
   reset,
 }: {
@@ -17,7 +17,7 @@ export default function ProjectError({
         </svg>
       </div>
       <div className="text-center max-w-md">
-        <h2 className="text-base font-semibold text-neutral-200 mb-2">Failed to load project</h2>
+        <h2 className="text-base font-semibold text-neutral-200 mb-2">Something went wrong</h2>
         <p className="text-sm text-neutral-500">{error.message || 'An unexpected error occurred.'}</p>
       </div>
       <div className="flex items-center gap-3">
@@ -25,13 +25,13 @@ export default function ProjectError({
           onClick={reset}
           className="px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 hover:bg-primary-500 text-white transition-colors"
         >
-          Retry
+          Try again
         </button>
         <Link
           href="/app"
           className="px-4 py-2 text-sm font-medium rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
         >
-          ← Back to Projects
+          Go to Projects
         </Link>
       </div>
     </div>

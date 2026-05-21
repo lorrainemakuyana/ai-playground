@@ -4,6 +4,16 @@ const API_BASE =
     ? (process.env.API_URL ?? 'http://localhost:8000')
     : '/api'
 
+export class ApiError extends Error {
+  constructor(
+    public readonly status: number,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 function getStoredToken(): string | null {
   if (typeof document === 'undefined') return null
   const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/)
@@ -15,20 +25,32 @@ async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
-  })
-
-  if (res.status === 401) {
-    if (typeof window !== 'undefined') window.location.href = '/auth'
-    throw new Error('Session expired. Please log in again.')
+  let res: Response
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
+    })
+  } catch {
+    throw new ApiError(0, 'Unable to reach the server. Check your connection and try again.')
   }
 
   if (!res.ok) {
-    const error = await res.json().catch(() => ({ detail: res.statusText }))
-    throw new Error(error.detail ?? 'Request failed')
+    const body = await res.json().catch(() => ({ detail: res.statusText }))
+    const message: string = body.detail ?? 'Request failed'
+
+    if (res.status === 401) {
+      // Only redirect to /auth when the request is not already from the auth page.
+      // Redirecting from /auth causes a page reload that prevents the error from
+      // being shown and triggers FrameDoesNotExistError in browser extensions.
+      if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
+        window.location.href = '/auth'
+      }
+    }
+
+    throw new ApiError(res.status, message)
   }
+
   if (res.status === 204) return undefined as T
   return res.json()
 }

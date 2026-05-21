@@ -20,13 +20,15 @@ export default function ShareModal({ projectId, onClose }: Props) {
   const [revokingShare, setRevokingShare] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
 
   const loadShares = useCallback(async () => {
     try {
       const data = await getShares(projectId)
       setShares(data)
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to load collaborators')
     } finally {
       setLoading(false)
     }
@@ -52,11 +54,12 @@ export default function ShareModal({ projectId, onClose }: Props) {
 
   async function handleRevokeShare(shareId: string) {
     setRevokingShare(shareId)
+    setActionError('')
     try {
       await revokeShare(projectId, shareId)
       setShares(prev => prev.map(s => s.id === shareId ? { ...s, revoked_at: new Date().toISOString() } : s))
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to revoke access')
     } finally {
       setRevokingShare(null)
     }
@@ -64,11 +67,12 @@ export default function ShareModal({ projectId, onClose }: Props) {
 
   async function handleGenerateLink() {
     setGeneratingLink(true)
+    setActionError('')
     try {
       const link = await getShareLink(projectId)
       setShareLink(link)
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to generate link')
     } finally {
       setGeneratingLink(false)
     }
@@ -77,11 +81,12 @@ export default function ShareModal({ projectId, onClose }: Props) {
   async function handleRevokeLink() {
     if (!shareLink) return
     setRevokingLinkId(shareLink.id)
+    setActionError('')
     try {
       await revokeShareLink(projectId)
       setShareLink(null)
-    } catch {
-      // silently ignore
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to revoke link')
     } finally {
       setRevokingLinkId(null)
     }
@@ -122,6 +127,22 @@ export default function ShareModal({ projectId, onClose }: Props) {
         </div>
 
         <div className="overflow-y-auto flex-1 px-6 py-5 space-y-6">
+          {loadError && (
+            <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/50 border border-red-900/50 rounded-lg px-3 py-2.5">
+              <svg className="w-3.5 h-3.5 flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {loadError}
+            </div>
+          )}
+          {actionError && (
+            <div className="flex items-center gap-2 text-xs text-red-400 bg-red-950/50 border border-red-900/50 rounded-lg px-3 py-2.5">
+              <svg className="w-3.5 h-3.5 flex-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {actionError}
+            </div>
+          )}
           {/* Invite by email */}
           <section>
             <h3 className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Invite by email</h3>

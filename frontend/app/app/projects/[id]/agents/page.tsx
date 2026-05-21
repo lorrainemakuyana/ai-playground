@@ -37,16 +37,21 @@ function AgentCard({ agent, taskCount, projectId, onUpdate, onArchive }: AgentCa
   const [spec, setSpec] = useState(agent.specialization)
   const [modelName, setModelName] = useState(agent.model_name)
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const [archiving, setArchiving] = useState(false)
+  const [archiveError, setArchiveError] = useState('')
   const roleLabel = ROLE_LABELS[agent.role] ?? agent.role
   const modelLabel = MODELS.find(m => m.value === agent.model_name)?.label ?? agent.model_name
 
   async function handleSave() {
     setSaving(true)
+    setSaveError('')
     try {
       const updated = await updateAgent(projectId, agent.id, { specialization: spec, model_name: modelName })
       onUpdate(updated)
       setEditing(false)
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save changes')
     } finally {
       setSaving(false)
     }
@@ -54,9 +59,12 @@ function AgentCard({ agent, taskCount, projectId, onUpdate, onArchive }: AgentCa
 
   async function handleArchive() {
     setArchiving(true)
+    setArchiveError('')
     try {
       await archiveAgent(projectId, agent.id)
       onArchive(agent.id)
+    } catch (err) {
+      setArchiveError(err instanceof Error ? err.message : 'Failed to archive agent')
     } finally {
       setArchiving(false)
     }
@@ -100,7 +108,7 @@ function AgentCard({ agent, taskCount, projectId, onUpdate, onArchive }: AgentCa
           <input
             className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-2 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
             value={spec}
-            onChange={e => setSpec(e.target.value)}
+            onChange={e => { setSpec(e.target.value); setSaveError('') }}
             placeholder="Specialization"
           />
           <select
@@ -110,30 +118,34 @@ function AgentCard({ agent, taskCount, projectId, onUpdate, onArchive }: AgentCa
           >
             {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
           </select>
+          {saveError && <p className="text-xs text-red-400">{saveError}</p>}
           <div className="flex gap-2">
             <button onClick={handleSave} disabled={saving}
               className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md bg-primary-600 hover:bg-primary-500 text-white disabled:opacity-50">
               {saving ? 'Saving…' : 'Save'}
             </button>
-            <button onClick={() => { setEditing(false); setSpec(agent.specialization); setModelName(agent.model_name) }}
+            <button onClick={() => { setEditing(false); setSpec(agent.specialization); setModelName(agent.model_name); setSaveError('') }}
               className="flex-1 px-3 py-1.5 text-xs font-medium rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className="flex gap-2">
-          <button onClick={() => setEditing(true)}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Edit
-          </button>
-          <button onClick={handleArchive} disabled={archiving}
-            className="px-3 py-1.5 text-xs font-medium rounded-md bg-neutral-800 hover:bg-red-900 text-neutral-400 hover:text-red-300 transition-colors disabled:opacity-50">
-            {archiving ? '…' : 'Archive'}
-          </button>
+        <div className="space-y-2">
+          {archiveError && <p className="text-xs text-red-400">{archiveError}</p>}
+          <div className="flex gap-2">
+            <button onClick={() => { setEditing(true); setArchiveError('') }}
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors">
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+              Edit
+            </button>
+            <button onClick={handleArchive} disabled={archiving}
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-neutral-800 hover:bg-red-900 text-neutral-400 hover:text-red-300 transition-colors disabled:opacity-50">
+              {archiving ? '…' : 'Archive'}
+            </button>
+          </div>
         </div>
       )}
 

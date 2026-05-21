@@ -17,8 +17,8 @@ const MODELS = [
 
 const ROLE_LABELS: Record<AgentRole, string> = {
   'tech-lead':  'Tech Lead',
-  'engineer-1': 'Software Engineer 1',
-  'engineer-2': 'Software Engineer 2',
+  'engineer-1': 'Senior Engineer (1)',
+  'engineer-2': 'Senior Engineer (2)',
   'qa':         'QA Engineer',
   'sre':        'SRE',
   'custom':     'Custom',
@@ -158,6 +158,7 @@ function AgentCard({ agent, taskCount, projectId, onUpdate, onArchive }: AgentCa
 
 function AddAgentForm({ projectId, onAdded }: { projectId: string; onAdded: (a: Agent) => void }) {
   const [spec, setSpec] = useState('')
+  const [role, setRole] = useState<AgentRole>('custom')
   const [modelName, setModelName] = useState('claude-sonnet-4-6')
   const [adding, setAdding] = useState(false)
   const [error, setError] = useState('')
@@ -166,9 +167,10 @@ function AddAgentForm({ projectId, onAdded }: { projectId: string; onAdded: (a: 
     if (spec.trim().length < 2) { setError('At least 2 characters'); return }
     setAdding(true)
     try {
-      const agent = await addAgent(projectId, { specialization: spec.trim(), model_name: modelName })
+      const agent = await addAgent(projectId, { specialization: spec.trim(), model_name: modelName, role })
       onAdded(agent)
       setSpec('')
+      setRole('custom')
       setModelName('claude-sonnet-4-6')
       setError('')
     } catch (e) {
@@ -180,21 +182,39 @@ function AddAgentForm({ projectId, onAdded }: { projectId: string; onAdded: (a: 
 
   return (
     <div className="bg-neutral-900 border border-dashed border-neutral-700 rounded-xl p-5 space-y-3">
-      <p className="text-sm font-semibold text-neutral-300">Add custom agent</p>
-      <input
-        className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
-        placeholder="e.g. Security Auditor, Database Engineer"
-        value={spec}
-        onChange={e => { setSpec(e.target.value); setError('') }}
-        maxLength={100}
-      />
-      <select
-        className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
-        value={modelName}
-        onChange={e => setModelName(e.target.value)}
-      >
-        {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-      </select>
+      <p className="text-sm font-semibold text-neutral-300">Add agent</p>
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 mb-1">Specialization</label>
+        <input
+          className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          placeholder="e.g. Security Auditor, Database Engineer"
+          value={spec}
+          onChange={e => { setSpec(e.target.value); setError('') }}
+          maxLength={100}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 mb-1">Role</label>
+        <select
+          className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          value={role}
+          onChange={e => setRole(e.target.value as AgentRole)}
+        >
+          {(Object.entries(ROLE_LABELS) as [AgentRole, string][]).map(([value, label]) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-neutral-500 mb-1">Model</label>
+        <select
+          className="w-full bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          value={modelName}
+          onChange={e => setModelName(e.target.value)}
+        >
+          {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+        </select>
+      </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
       <button
         onClick={handleAdd}

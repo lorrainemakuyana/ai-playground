@@ -17,8 +17,8 @@ const MODELS = [
 
 const ROLE_LABELS: Record<AgentRole, string> = {
   'tech-lead':  'Tech Lead',
-  'engineer-1': 'Software Engineer 1',
-  'engineer-2': 'Software Engineer 2',
+  'engineer-1': 'Senior Engineer (1)',
+  'engineer-2': 'Senior Engineer (2)',
   'qa':         'QA Engineer',
   'sre':        'SRE',
   'custom':     'Custom',

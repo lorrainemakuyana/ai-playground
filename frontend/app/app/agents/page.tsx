@@ -17,8 +17,8 @@ const MODELS = [
 
 const ROLES: { value: AgentRole; label: string }[] = [
   { value: 'tech-lead',  label: 'Tech Lead' },
-  { value: 'engineer-1', label: 'Software Engineer 1' },
-  { value: 'engineer-2', label: 'Software Engineer 2' },
+  { value: 'engineer-1', label: 'Senior Engineer (1)' },
+  { value: 'engineer-2', label: 'Senior Engineer (2)' },
   { value: 'qa',         label: 'QA Engineer' },
   { value: 'sre',        label: 'SRE' },
   { value: 'custom',     label: 'Custom' },

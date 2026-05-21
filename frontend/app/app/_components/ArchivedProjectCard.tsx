@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { deleteProject, unarchiveProject } from '@/lib/api'
 import { PHASE_LABELS } from '@/lib/constants'
 import type { ProjectSummary } from '@/types'
@@ -45,7 +46,7 @@ export default function ArchivedProjectCard({ project, onDeleted, onUnarchived }
 
   return (
     <div className="bg-neutral-900/60 border border-neutral-800 rounded-xl flex flex-col min-h-[200px] opacity-75">
-      <div className="block p-6 flex-1">
+      <Link href={`/app/projects/${project.id}/archived`} className="block p-6 flex-1 hover:opacity-90 transition-opacity">
         <div className="flex items-start justify-between gap-3 mb-3">
           <h3 className="text-base font-semibold text-neutral-400 leading-tight">
             {project.name}
@@ -75,7 +76,7 @@ export default function ArchivedProjectCard({ project, onDeleted, onUnarchived }
             Archived {project.archived_at ? new Date(project.archived_at).toLocaleDateString() : ''}
           </span>
         </div>
-      </div>
+      </Link>
 
       <div className="px-4 py-3 border-t border-neutral-800 flex flex-col gap-2">
         {error && <span className="text-xs text-red-400">{error}</span>}

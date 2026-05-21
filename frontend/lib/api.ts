@@ -96,10 +96,10 @@ export async function getTasks(projectId: string, filters?: { phase?: string; st
   return fetchJSON<{ tasks: import('@/types').Task[] }>(`/projects/${projectId}/tasks${query}`)
 }
 
-export async function addAgent(projectId: string, data: { specialization: string; model_name?: string }) {
+export async function addAgent(projectId: string, data: { specialization: string; model_name?: string; role?: import('@/types').AgentRole }) {
   return fetchJSON<import('@/types').Agent>(`/projects/${projectId}/agents`, {
     method: 'POST',
-    body: JSON.stringify({ role: 'custom', specialization: data.specialization, model_name: data.model_name ?? 'claude-sonnet-4-6' }),
+    body: JSON.stringify({ role: data.role ?? 'custom', specialization: data.specialization, model_name: data.model_name ?? 'claude-sonnet-4-6' }),
   })
 }
 

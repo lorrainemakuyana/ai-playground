@@ -24,6 +24,7 @@ export interface Agent {
   role: AgentRole
   specialization: string
   model_name: string
+  system_prompt: string | null
   status: AgentStatus
   is_template_agent: boolean
   is_archived: boolean

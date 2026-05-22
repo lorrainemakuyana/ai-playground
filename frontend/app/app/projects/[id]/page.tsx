@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
-import { getProject, dispatchNextTask, sendDirective } from '@/lib/api'
+import { getProject, dispatchNextTask, sendDirective, cancelTask } from '@/lib/api'
 import type { Project, Agent, Task, AgentMessage, SDLCPhase, AgentStatus } from '@/types'
 import { useProjectStream } from '@/hooks/useProjectStream'
 import PhaseTracker from '@/components/PhaseTracker'
@@ -28,6 +28,7 @@ export default function ProjectDashboardPage() {
   const [fetchError, setFetchError] = useState('')
 
   const [resuming, setResuming] = useState(false)
+  const [stoppingAgentId, setStoppingAgentId] = useState<string | null>(null)
   const [taskLiveOutputs, setTaskLiveOutputs] = useState<Record<string, string>>({})
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null)
 
@@ -120,6 +121,20 @@ export default function ProjectDashboardPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to dispatch next task')
     } finally {
       setResuming(false)
+    }
+  }
+
+  async function handleStopAgent(agentId: string) {
+    const inProgressTask = tasks.find(t => t.assigned_agent_id === agentId && t.status === 'in-progress')
+    if (!inProgressTask) return
+    setStoppingAgentId(agentId)
+    try {
+      const cancelled = await cancelTask(projectId, inProgressTask.id)
+      handleTaskUpdate(cancelled)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to stop agent')
+    } finally {
+      setStoppingAgentId(null)
     }
   }
 
@@ -318,6 +333,8 @@ export default function ProjectDashboardPage() {
                   onClick={(agentId) => {
                     setSelectedAgentId(prev => prev === agentId ? null : agentId)
                   }}
+                  onStop={handleStopAgent}
+                  stopping={stoppingAgentId === agent.id}
                 />
               ))}
             </div>

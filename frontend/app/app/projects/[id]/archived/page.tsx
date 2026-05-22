@@ -7,7 +7,6 @@ import { getProject, unarchiveProject, deleteProject } from '@/lib/api'
 import { PHASE_LABELS } from '@/lib/constants'
 import type { Project } from '@/types'
 import Spinner from '@/components/Spinner'
-import StatusBadge from '@/components/StatusBadge'
 
 export default function ArchivedProjectPage() {
   const params = useParams()
@@ -86,27 +85,25 @@ export default function ArchivedProjectPage() {
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col">
       {/* Top bar */}
-      <div className="flex items-center gap-4 px-4 sm:px-6 h-14 border-b border-neutral-800 bg-neutral-900 flex-none">
+      <div className="flex items-center gap-3 px-4 sm:px-6 h-14 border-b border-neutral-800 bg-neutral-900 flex-none">
         <Link
           href="/app"
-          className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors flex items-center gap-1"
+          className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors flex items-center gap-1 flex-none"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
           Projects
         </Link>
-
-        <div className="flex-1 flex items-center gap-3 min-w-0">
-          <h1 className="text-sm font-semibold text-neutral-400 truncate">{project.name}</h1>
-          <StatusBadge status={project.status} />
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-500 border border-neutral-700 flex-none">
-            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8m-9 4v4m4-4v4" />
-            </svg>
-            Archived
-          </span>
-        </div>
+        <span className="text-neutral-700">/</span>
+        <span className="text-sm font-semibold text-neutral-100 truncate">{project.name}</span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-neutral-800 text-neutral-500 border border-neutral-700 flex-none">
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8l1 12a2 2 0 002 2h8a2 2 0 002-2L19 8m-9 4v4m4-4v4" />
+          </svg>
+          Archived
+        </span>
+        <div className="flex-1" />
       </div>
 
       {/* Unarchive banner */}
@@ -114,7 +111,7 @@ export default function ArchivedProjectPage() {
         <div className="max-w-3xl mx-auto flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1 min-w-0">
             <p className="text-sm text-neutral-400">
-              This project is archived and paused. Unarchiving reactivates it and takes you back to the live dashboard.
+              This project is archived and paused.
             </p>
             {unarchiveError && (
               <p className="text-xs text-red-400 mt-1">{unarchiveError}</p>
@@ -152,16 +149,12 @@ export default function ArchivedProjectPage() {
           <h2 className="text-lg font-semibold text-neutral-300 mb-1">{project.name}</h2>
           <p className="text-sm text-neutral-500 mb-5">{project.description}</p>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-neutral-600 mb-0.5">Phase</p>
               <p className="text-sm font-medium text-neutral-400">
                 {PHASE_LABELS[project.current_phase] ?? project.current_phase}
               </p>
-            </div>
-            <div>
-              <p className="text-xs text-neutral-600 mb-0.5">Status</p>
-              <p className="text-sm font-medium text-neutral-400 capitalize">{project.status}</p>
             </div>
             <div>
               <p className="text-xs text-neutral-600 mb-0.5">Agents</p>

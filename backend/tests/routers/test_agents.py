@@ -15,7 +15,7 @@ async def test_add_agent_success(client):
     assert data["role"] == "custom"
     assert data["specialization"] == "Security Expert"
     assert data["status"] == "idle"
-    assert "system_prompt" not in data  # must be excluded
+    assert data["system_prompt"] is None
 
 
 async def test_add_agent_project_not_found(client):

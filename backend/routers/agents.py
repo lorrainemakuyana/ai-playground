@@ -14,21 +14,6 @@ import services.prompt_builder as prompt_builder
 router = APIRouter()
 
 
-@router.get("/{project_id}/agents", response_model=list[AgentSchema])
-async def list_agents(
-    project_id: str,
-    session: Any = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-) -> list[AgentSchema]:
-    await get_owned_project(project_id, current_user, session)
-    result = await session.exec(
-        select(Agent)
-        .where(Agent.project_id == project_id, Agent.is_archived == False)
-        .order_by(Agent.is_template_agent.desc())
-    )
-    return [AgentSchema.model_validate(a) for a in result.all()]
-
-
 @router.post("/{project_id}/agents", status_code=status.HTTP_201_CREATED, response_model=AgentSchema)
 async def create_agent(
     project_id: str,

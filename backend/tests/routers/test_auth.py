@@ -65,33 +65,5 @@ async def test_logout_invalidates_token(raw_client):
     reg = await raw_client.post("/auth/register", json=VALID_CREDS)
     token = reg.json()["access_token"]
     await raw_client.post("/auth/logout", headers={"Authorization": f"Bearer {token}"})
-    resp = await raw_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
+    resp = await raw_client.get("/projects", headers={"Authorization": f"Bearer {token}"})
     assert resp.status_code == 401
-
-
-async def test_me_with_token(raw_client):
-    reg = await raw_client.post("/auth/register", json=VALID_CREDS)
-    token = reg.json()["access_token"]
-    resp = await raw_client.get("/auth/me", headers={"Authorization": f"Bearer {token}"})
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["email"] == VALID_CREDS["email"]
-    assert "id" in data
-
-
-async def test_me_without_token(raw_client):
-    resp = await raw_client.get("/auth/me")
-    assert resp.status_code == 401
-
-
-async def test_me_with_invalid_token(raw_client):
-    resp = await raw_client.get("/auth/me", headers={"Authorization": "Bearer not-a-valid-jwt"})
-    assert resp.status_code == 401
-
-
-async def test_me_via_cookie(raw_client):
-    reg = await raw_client.post("/auth/register", json=VALID_CREDS)
-    token = reg.json()["access_token"]
-    resp = await raw_client.get("/auth/me", cookies={"auth_token": token})
-    assert resp.status_code == 200
-    assert resp.json()["email"] == VALID_CREDS["email"]

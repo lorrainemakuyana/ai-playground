@@ -11,7 +11,7 @@ from sqlmodel import select
 from database import get_session
 from dependencies import get_current_user
 from models.db import ProjectShare, User
-from models.schemas import LoginRequest, RegisterRequest, TokenResponse, UserSchema
+from models.schemas import LoginRequest, RegisterRequest, TokenResponse
 from services.auth_service import create_access_token, hash_password, verify_password
 
 limiter = Limiter(key_func=get_remote_address)
@@ -101,7 +101,3 @@ async def logout(
     await session.commit()
     response.delete_cookie(key="auth_token", path="/")
 
-
-@router.get("/me", response_model=UserSchema)
-async def me(current_user: User = Depends(get_current_user)) -> UserSchema:
-    return UserSchema.model_validate(current_user)

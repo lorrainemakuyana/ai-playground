@@ -7,7 +7,7 @@ interface TaskFeedProps {
   tasks: Task[]
   onTaskClick: (taskId: string) => void
   isConnected: boolean
-  onSendDirective: (content: string) => Promise<void>
+  onSendDirective?: (content: string) => Promise<void>
   filterLabel?: string | null
   onClearFilter?: () => void
 }
@@ -22,7 +22,7 @@ export default function TaskFeed({ tasks, onTaskClick, isConnected, onSendDirect
     if (!content || sending) return
     setSending(true)
     try {
-      await onSendDirective(content)
+      await onSendDirective?.(content)
       setInput('')
       if (textareaRef.current) textareaRef.current.style.height = 'auto'
     } finally {

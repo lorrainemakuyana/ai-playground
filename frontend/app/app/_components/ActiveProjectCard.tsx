@@ -7,8 +7,6 @@ import { PHASE_LABELS } from '@/lib/constants'
 import type { ProjectSummary } from '@/types'
 import StatusBadge from '@/components/StatusBadge'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-
 interface Props {
   project: ProjectSummary
   onArchived: (projectId: string) => void
@@ -30,7 +28,7 @@ function DownloadLink({ href, label }: { href: string; label: string }) {
 }
 
 export default function ActiveProjectCard({ project, onArchived }: Props) {
-  const base = `${API_BASE}/projects/${project.id}`
+  const base = `/api/projects/${project.id}`
   const isDone = project.status === 'done'
   const [confirming, setConfirming] = useState(false)
   const [archiving, setArchiving] = useState(false)

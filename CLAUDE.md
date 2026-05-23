@@ -36,3 +36,5 @@ Read every user prompt and invoke the most appropriate skill **before** doing an
 ## Commit rules
 
 - Never add `Co-Authored-By: Claude` trailers to commit messages.
+- Always run `./run_tests.sh` before pushing any commits. Fix all failures before pushing.
+- Before opening or updating a PR, confirm tests pass locally.

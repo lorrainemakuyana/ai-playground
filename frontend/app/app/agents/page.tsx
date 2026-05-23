@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   getAgentTemplates, createAgentTemplate, updateAgentTemplate, archiveAgentTemplate,
@@ -17,8 +17,8 @@ const MODELS = [
 
 const ROLES: { value: AgentRole; label: string }[] = [
   { value: 'tech-lead',  label: 'Tech Lead' },
-  { value: 'engineer-1', label: 'Software Engineer 1' },
-  { value: 'engineer-2', label: 'Software Engineer 2' },
+  { value: 'engineer-1', label: 'Senior Engineer (1)' },
+  { value: 'engineer-2', label: 'Senior Engineer (2)' },
   { value: 'qa',         label: 'QA Engineer' },
   { value: 'sre',        label: 'SRE' },
   { value: 'custom',     label: 'Custom' },
@@ -26,6 +26,13 @@ const ROLES: { value: AgentRole; label: string }[] = [
 
 interface EditState {
   specialization: string
+  model_name: string
+  system_prompt: string
+}
+
+interface NewAgentState {
+  role: AgentRole
+  customTitle: string
   model_name: string
   system_prompt: string
 }
@@ -38,9 +45,10 @@ export default function DefaultTeamPage() {
   const [editState, setEditState] = useState<EditState>({ specialization: '', model_name: '', system_prompt: '' })
   const [saving, setSaving] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
-  const [newAgent, setNewAgent] = useState<{ role: AgentRole; specialization: string; model_name: string }>({
-    role: 'custom', specialization: '', model_name: 'claude-sonnet-4-6',
+  const [newAgent, setNewAgent] = useState<NewAgentState>({
+    role: 'custom', customTitle: '', model_name: 'claude-sonnet-4-6', system_prompt: '',
   })
+  const addFormRef = useRef<HTMLDivElement>(null)
   const [adding, setAdding] = useState(false)
 
   const load = useCallback(async () => {
@@ -87,20 +95,30 @@ export default function DefaultTeamPage() {
   }
 
   async function handleAdd() {
-    const roleLabel = ROLES.find(r => r.value === newAgent.role)?.label ?? newAgent.role
-    const payload = { ...newAgent, specialization: roleLabel }
+    const isCustom = newAgent.role === 'custom'
+    const specialization = isCustom
+      ? newAgent.customTitle.trim()
+      : (ROLES.find(r => r.value === newAgent.role)?.label ?? newAgent.role)
+
     setAdding(true)
     try {
-      const created = await createAgentTemplate(payload)
+      const created = await createAgentTemplate({
+        role: newAgent.role,
+        specialization,
+        model_name: newAgent.model_name,
+        system_prompt: newAgent.system_prompt.trim() || null,
+      })
       setTemplates(prev => [...prev, created])
       setShowAdd(false)
-      setNewAgent({ role: 'custom', specialization: '', model_name: 'claude-sonnet-4-6' })
+      setNewAgent({ role: 'custom', customTitle: '', model_name: 'claude-sonnet-4-6', system_prompt: '' })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Add failed')
     } finally {
       setAdding(false)
     }
   }
+
+  const canAdd = newAgent.role !== 'custom' || newAgent.customTitle.trim().length >= 2
 
   if (loading) return (
     <div className="min-h-screen bg-neutral-950 flex items-center justify-center"><Spinner /></div>
@@ -117,7 +135,7 @@ export default function DefaultTeamPage() {
             Projects
           </Link>
           <span className="text-neutral-700">/</span>
-          <span className="text-sm font-semibold text-neutral-100 flex-1">Default Engineering Team</span>
+          <span className="text-sm font-semibold text-neutral-100 flex-1">Manage Agents</span>
         </div>
       </header>
 
@@ -127,7 +145,10 @@ export default function DefaultTeamPage() {
             These agents are automatically added to every new project.
           </p>
           <button
-            onClick={() => setShowAdd(true)}
+            onClick={() => {
+              setShowAdd(true)
+              setTimeout(() => addFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
+            }}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-500 text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -147,17 +168,20 @@ export default function DefaultTeamPage() {
 
           return (
             <div key={tmpl.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-5">
-              <div className="flex items-center gap-4">
-                <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold uppercase select-none flex-none ${agentAvatarClass(tmpl.role)}`}>
-                  {getInitials(tmpl.role)}
-                </div>
-
-                {isEditing ? (
+              {isEditing ? (
+                <div className="flex items-start gap-4">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold uppercase select-none flex-none ${agentAvatarClass(tmpl.role)}`}>
+                    {getInitials(tmpl.role)}
+                  </div>
                   <div className="flex-1 flex flex-col gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-neutral-100">{tmpl.specialization}</p>
+                      <p className="text-xs text-neutral-500">{ROLES.find(r => r.value === tmpl.role)?.label ?? tmpl.role}</p>
+                    </div>
                     <div className="flex flex-col gap-1">
                       <label className="text-xs font-medium text-neutral-400">Model</label>
                       <select
-                        className="bg-neutral-950 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                        className="w-1/2 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
                         value={editState.model_name}
                         onChange={e => setEditState(s => ({ ...s, model_name: e.target.value }))}
                       >
@@ -185,48 +209,51 @@ export default function DefaultTeamPage() {
                       </button>
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-neutral-100">{tmpl.specialization}</p>
-                      <p className="text-xs text-neutral-500 mt-0.5">
-                        {ROLES.find(r => r.value === tmpl.role)?.label ?? tmpl.role}
-                        {' · '}
-                        <span className="font-mono">{MODELS.find(m => m.value === tmpl.model_name)?.label ?? tmpl.model_name}</span>
-                      </p>
-                      {tmpl.system_prompt && (
-                        <p className="text-xs text-neutral-600 mt-1.5 font-mono line-clamp-2">{tmpl.system_prompt}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 flex-none">
-                      <button onClick={() => startEdit(tmpl)}
-                        className="p-2 rounded-lg text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
-                        title="Edit">
+                </div>
+              ) : (
+                <div className="flex items-center gap-4">
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold uppercase select-none flex-none ${agentAvatarClass(tmpl.role)}`}>
+                    {getInitials(tmpl.role)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-neutral-100">{tmpl.specialization}</p>
+                    <p className="text-xs text-neutral-500 mt-0.5">
+                      {ROLES.find(r => r.value === tmpl.role)?.label ?? tmpl.role}
+                      {' · '}
+                      <span className="font-mono">{MODELS.find(m => m.value === tmpl.model_name)?.label ?? tmpl.model_name}</span>
+                    </p>
+                    {tmpl.system_prompt && (
+                      <p className="text-xs text-neutral-600 mt-1.5 font-mono line-clamp-2">{tmpl.system_prompt}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1 flex-none">
+                    <button onClick={() => startEdit(tmpl)}
+                      className="p-2 rounded-lg text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+                      title="Edit">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    {!isTechLead && (
+                      <button onClick={() => handleArchive(tmpl.id)}
+                        className="p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-colors"
+                        title="Archive">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
                         </svg>
                       </button>
-                      {!isTechLead && (
-                        <button onClick={() => handleArchive(tmpl.id)}
-                          className="p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-colors"
-                          title="Archive">
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </>
-                )}
-              </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}
 
         {showAdd && (
-          <div className="bg-neutral-900 border border-primary-800 rounded-xl p-5">
-            <p className="text-sm font-semibold text-neutral-200 mb-4">New default agent</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          <div ref={addFormRef} className="bg-neutral-900 border border-primary-800 rounded-xl p-5 space-y-3">
+            <p className="text-sm font-semibold text-neutral-200">New default agent</p>
+            <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-medium text-neutral-400">Role</label>
                 <select
@@ -237,23 +264,45 @@ export default function DefaultTeamPage() {
                   {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                 </select>
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs font-medium text-neutral-400">Model</label>
-                <select
-                  className="bg-neutral-950 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  value={newAgent.model_name}
-                  onChange={e => setNewAgent(s => ({ ...s, model_name: e.target.value }))}
-                >
-                  {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-                </select>
-              </div>
+              {newAgent.role === 'custom' && (
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-medium text-neutral-400">Custom role title</label>
+                  <input
+                    className="bg-neutral-950 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    placeholder="e.g. DevOps Engineer"
+                    value={newAgent.customTitle}
+                    onChange={e => setNewAgent(s => ({ ...s, customTitle: e.target.value }))}
+                    maxLength={100}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-400">Model</label>
+              <select
+                className="w-1/2 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-1.5 text-sm text-neutral-100 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                value={newAgent.model_name}
+                onChange={e => setNewAgent(s => ({ ...s, model_name: e.target.value }))}
+              >
+                {MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-neutral-400">System Prompt <span className="text-neutral-600 font-normal">(optional)</span></label>
+              <textarea
+                className="bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2 text-sm text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-y min-h-[72px] leading-snug font-mono"
+                placeholder="Define this agent's persona, expertise, and behavior…"
+                rows={3}
+                value={newAgent.system_prompt}
+                onChange={e => setNewAgent(s => ({ ...s, system_prompt: e.target.value }))}
+              />
             </div>
             <div className="flex justify-end gap-2">
               <button onClick={() => setShowAdd(false)}
                 className="px-4 py-1.5 text-xs font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300">
                 Cancel
               </button>
-              <button onClick={handleAdd} disabled={adding || !newAgent.specialization.trim()}
+              <button onClick={handleAdd} disabled={adding || !canAdd}
                 className="px-4 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-500 text-white disabled:opacity-40">
                 {adding ? 'Adding…' : 'Add'}
               </button>

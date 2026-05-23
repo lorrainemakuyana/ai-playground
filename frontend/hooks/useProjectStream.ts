@@ -34,8 +34,10 @@ export function useProjectStream({
     esRef.current?.close()
     setConnectionStatus(attemptsRef.current === 0 ? 'connecting' : 'reconnecting')
 
-    const backendBase = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-    const es = new EventSource(`${backendBase}/projects/${projectId}/stream`)
+    // Route through the Next.js /api proxy (same-origin) so the auth cookie is
+    // included automatically. EventSource has no header API, so direct cross-origin
+    // requests to the backend would never carry the token.
+    const es = new EventSource(`/api/projects/${projectId}/stream`)
     esRef.current = es
 
     es.onopen = () => {

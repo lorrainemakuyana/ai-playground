@@ -96,10 +96,15 @@ export async function getTasks(projectId: string, filters?: { phase?: string; st
   return fetchJSON<{ tasks: import('@/types').Task[] }>(`/projects/${projectId}/tasks${query}`)
 }
 
-export async function addAgent(projectId: string, data: { specialization: string; model_name?: string }) {
+export async function addAgent(projectId: string, data: { specialization: string; model_name?: string; role?: import('@/types').AgentRole; system_prompt?: string | null }) {
   return fetchJSON<import('@/types').Agent>(`/projects/${projectId}/agents`, {
     method: 'POST',
-    body: JSON.stringify({ role: 'custom', specialization: data.specialization, model_name: data.model_name ?? 'claude-sonnet-4-6' }),
+    body: JSON.stringify({
+      role: data.role ?? 'custom',
+      specialization: data.specialization,
+      model_name: data.model_name ?? 'claude-sonnet-4-6',
+      system_prompt: data.system_prompt ?? null,
+    }),
   })
 }
 
@@ -118,7 +123,7 @@ export async function getAgentTemplates() {
   return fetchJSON<import('@/types').AgentTemplate[]>('/agent-templates')
 }
 
-export async function createAgentTemplate(data: { role: string; specialization: string; model_name: string }) {
+export async function createAgentTemplate(data: { role: string; specialization: string; model_name: string; system_prompt?: string | null }) {
   return fetchJSON<import('@/types').AgentTemplate>('/agent-templates', {
     method: 'POST',
     body: JSON.stringify(data),

@@ -78,6 +78,7 @@ class AgentSchema(BaseModel):
     role: AgentRole
     specialization: str
     model_name: str
+    system_prompt: Optional[str] = None
     status: AgentStatus
     is_template_agent: bool
     is_archived: bool

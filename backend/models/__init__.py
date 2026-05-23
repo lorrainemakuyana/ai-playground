@@ -8,7 +8,6 @@ from models.schemas import (
     ProjectSummarySchema,
     CreateProjectRequest,
     CreateAgentRequest,
-    UpdateTaskRequest,
 )
 
 __all__ = [
@@ -28,5 +27,4 @@ __all__ = [
     "ProjectSummarySchema",
     "CreateProjectRequest",
     "CreateAgentRequest",
-    "UpdateTaskRequest",
 ]

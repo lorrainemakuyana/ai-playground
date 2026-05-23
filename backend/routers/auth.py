@@ -11,14 +11,14 @@ from sqlmodel import select
 from database import get_session
 from dependencies import get_current_user
 from models.db import ProjectShare, User
-from models.schemas import LoginRequest, RegisterRequest, TokenResponse, UserSchema
+from models.schemas import LoginRequest, RegisterRequest, TokenResponse
 from services.auth_service import create_access_token, hash_password, verify_password
 
 limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
-_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
+_COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 30 days — matches ACCESS_TOKEN_EXPIRE_DAYS
 _SECURE_COOKIE = os.getenv("ENVIRONMENT", "development") == "production"
 
 
@@ -59,11 +59,12 @@ async def register(
             ProjectShare.revoked_at == None,  # noqa: E711
         )
     )
-    for pending in pending_result.all():
+    pending_shares = pending_result.all()
+    for pending in pending_shares:
         pending.user_id = user.id
         pending.joined_at = user.created_at
         session.add(pending)
-    if pending_result:
+    if pending_shares:
         await session.commit()
 
     token = create_access_token(user.id, user.email, user.token_version)
@@ -100,7 +101,3 @@ async def logout(
     await session.commit()
     response.delete_cookie(key="auth_token", path="/")
 
-
-@router.get("/me", response_model=UserSchema)
-async def me(current_user: User = Depends(get_current_user)) -> UserSchema:
-    return UserSchema.model_validate(current_user)

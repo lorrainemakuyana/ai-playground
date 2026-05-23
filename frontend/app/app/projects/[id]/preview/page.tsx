@@ -7,8 +7,6 @@ import { getPreviewInfo } from '@/lib/api'
 import type { PreviewInfo } from '@/lib/api'
 import Spinner from '@/components/Spinner'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-
 export default function PreviewPage() {
   const params = useParams()
   const projectId = params.id as string
@@ -182,7 +180,7 @@ export default function PreviewPage() {
           </div>
 
           <a
-            href={`${API_BASE}/projects/${projectId}/download`}
+            href={`/api/projects/${projectId}/download`}
             download
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg border border-primary-800 bg-primary-950 text-primary-300 text-sm font-medium hover:bg-primary-900 transition-colors"
           >

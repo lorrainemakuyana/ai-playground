@@ -12,7 +12,7 @@ from database import get_session
 from dependencies import get_current_user, get_owned_project
 from models.db import Project, Task, User
 from models.enums import SDLCPhase, TaskStatus
-from services.file_parser import merge_outputs, detect_project_type, default_start_command, parse_output
+from services.file_parser import merge_outputs, detect_project_type, default_start_command
 
 router = APIRouter()
 
@@ -96,12 +96,6 @@ async def download_project_zip(
 ) -> StreamingResponse:
     project, tasks = await _load(project_id, current_user, session)
 
-    # Collect implementation outputs and parse actual source files
-    impl_outputs = [
-        t.output for t in tasks
-        if t.phase == SDLCPhase.IMPLEMENTATION and t.status == TaskStatus.DONE and t.output
-    ]
-    # Also check for files from other phases (QA tests, SRE configs, etc.)
     all_outputs = [t.output for t in tasks if t.status == TaskStatus.DONE and t.output]
     merged = merge_outputs(all_outputs)
 

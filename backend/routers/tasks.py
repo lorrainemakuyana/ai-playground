@@ -10,7 +10,7 @@ from database import get_session
 from dependencies import get_accessible_project, get_current_user, get_owned_project
 from models.db import Task, User
 from models.enums import SDLCPhase, TaskStatus
-from models.schemas import TaskSchema, UpdateTaskRequest, DirectiveRequest
+from models.schemas import TaskSchema, DirectiveRequest
 import services.orchestrator as orchestrator
 
 router = APIRouter()
@@ -32,38 +32,6 @@ async def list_tasks(
         query = query.where(Task.status == status)
     result = await session.exec(query.order_by(Task.created_at.asc()))
     return {"tasks": [TaskSchema.model_validate(t) for t in result.all()]}
-
-
-@router.patch("/{project_id}/tasks/{task_id}", response_model=TaskSchema)
-async def update_task(
-    project_id: str,
-    task_id: str,
-    body: UpdateTaskRequest,
-    session: Any = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-) -> TaskSchema:
-    await get_owned_project(project_id, current_user, session)
-    task_result = await session.exec(
-        select(Task).where(Task.id == task_id, Task.project_id == project_id)
-    )
-    task = task_result.first()
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-    if not body.model_dump(exclude_none=True):
-        raise HTTPException(status_code=400, detail="No fields provided for update")
-
-    if body.status is not None:
-        task.status = body.status
-    if body.output is not None:
-        task.output = body.output
-    if body.assigned_agent_id is not None:
-        task.assigned_agent_id = body.assigned_agent_id
-
-    task.updated_at = datetime.now(timezone.utc)
-    session.add(task)
-    await session.commit()
-    await session.refresh(task)
-    return TaskSchema.model_validate(task)
 
 
 @router.post("/{project_id}/tasks/{task_id}/retry", response_model=TaskSchema)
@@ -111,8 +79,8 @@ async def cancel_task(
         raise HTTPException(status_code=400, detail=f"Cannot cancel task with status: {task.status}")
 
     await orchestrator.cancel_task(task_id, session)
-    task_result2 = await session.exec(select(Task).where(Task.id == task_id))
-    return TaskSchema.model_validate(task_result2.first())
+    await session.refresh(task)
+    return TaskSchema.model_validate(task)
 
 
 @router.post("/{project_id}/directive", response_model=TaskSchema, status_code=202)

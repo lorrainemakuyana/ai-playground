@@ -4,13 +4,13 @@ import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select
+from sqlmodel import delete as sql_delete, select
 from sqlalchemy import func
 
 from database import get_session, async_session_factory
 from dependencies import get_accessible_project, get_current_user, get_owned_project
-from models.db import Project, Agent, Task, AgentMessage, AgentTemplate, ProjectShare, User
-from models.enums import AgentRole, SDLCPhase
+from models.db import Project, Agent, AgentMessage, AgentTemplate, ProjectShare, ProjectShareLink, Task, User
+from models.enums import AgentRole
 from models.schemas import (
     AgentMessageSchema,
     AgentSchema,
@@ -97,7 +97,6 @@ async def create_project(
     return result
 
 
-
 @router.get("", response_model=dict)
 async def list_projects(
     session: Any = Depends(get_session),
@@ -119,9 +118,6 @@ async def list_projects(
         .order_by(ProjectShare.created_at.desc())
     )
     share_rows = shares_result.all()
-
-    # Collect all project IDs to fetch counts in bulk
-    all_project_ids = [p.id for p in own_projects] + [p.id for _, p in share_rows]
 
     agent_counts_result = await session.exec(
         select(Agent.project_id, func.count(Agent.id)).group_by(Agent.project_id)
@@ -225,6 +221,27 @@ async def get_project(
     )
 
 
+async def _project_summary(project: Project, session: Any) -> ProjectSummarySchema:
+    agent_count_result = await session.exec(
+        select(func.count(Agent.id)).where(Agent.project_id == project.id)
+    )
+    task_count_result = await session.exec(
+        select(func.count(Task.id)).where(Task.project_id == project.id)
+    )
+    return ProjectSummarySchema(
+        id=project.id,
+        name=project.name,
+        description=project.description,
+        status=project.status,
+        current_phase=project.current_phase,
+        created_at=project.created_at,
+        archived_at=project.archived_at,
+        agent_count=agent_count_result.one(),
+        task_count=task_count_result.one(),
+        is_owner=True,
+    )
+
+
 @router.patch("/{project_id}/archive", response_model=ProjectSummarySchema)
 async def archive_project(
     project_id: str,
@@ -238,18 +255,7 @@ async def archive_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
-    return ProjectSummarySchema(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        status=project.status,
-        current_phase=project.current_phase,
-        created_at=project.created_at,
-        archived_at=project.archived_at,
-        agent_count=0,
-        task_count=0,
-        is_owner=True,
-    )
+    return await _project_summary(project, session)
 
 
 @router.patch("/{project_id}/unarchive", response_model=ProjectSummarySchema)
@@ -265,18 +271,7 @@ async def unarchive_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
-    return ProjectSummarySchema(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        status=project.status,
-        current_phase=project.current_phase,
-        created_at=project.created_at,
-        archived_at=None,
-        agent_count=0,
-        task_count=0,
-        is_owner=True,
-    )
+    return await _project_summary(project, session)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -291,10 +286,6 @@ async def delete_project(
             status_code=422,
             detail="Project must be archived before it can be permanently deleted",
         )
-    # Hard delete — cascade via FK or explicit deletes
-    from sqlmodel import delete as sql_delete
-    from models.db import AgentMessage, ProjectShare, ProjectShareLink, Task, Agent
-
     for model, col in [
         (AgentMessage, AgentMessage.project_id),
         (ProjectShare, ProjectShare.project_id),

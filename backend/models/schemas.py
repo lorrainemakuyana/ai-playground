@@ -15,10 +15,6 @@ from models.enums import (
 
 
 # ---------------------------------------------------------------------------
-# Response schemas
-# ---------------------------------------------------------------------------
-
-# ---------------------------------------------------------------------------
 # Auth schemas
 # ---------------------------------------------------------------------------
 
@@ -44,14 +40,6 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: str
-
-
-class UserSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    email: str
-    created_at: datetime
 
 
 # ---------------------------------------------------------------------------
@@ -240,14 +228,6 @@ class UpdateAgentTemplateRequest(BaseModel):
     model_name: Optional[str] = None
     system_prompt: Optional[str] = None
     is_active: Optional[bool] = None
-
-
-class UpdateTaskRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    status: Optional[TaskStatus] = None
-    output: Optional[str] = None
-    assigned_agent_id: Optional[str] = None
 
 
 class DirectiveRequest(BaseModel):

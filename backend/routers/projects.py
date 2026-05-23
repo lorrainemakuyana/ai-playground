@@ -4,13 +4,13 @@ import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select
+from sqlmodel import delete as sql_delete, select
 from sqlalchemy import func
 
 from database import get_session, async_session_factory
 from dependencies import get_accessible_project, get_current_user, get_owned_project
-from models.db import Project, Agent, Task, AgentMessage, AgentTemplate, ProjectShare, User
-from models.enums import AgentRole, SDLCPhase
+from models.db import Project, Agent, AgentMessage, AgentTemplate, ProjectShare, ProjectShareLink, Task, User
+from models.enums import AgentRole
 from models.schemas import (
     AgentMessageSchema,
     AgentSchema,
@@ -95,7 +95,6 @@ async def create_project(
     )
     result.agents = [AgentSchema.model_validate(a) for a in agents]
     return result
-
 
 
 @router.get("", response_model=dict)
@@ -287,10 +286,6 @@ async def delete_project(
             status_code=422,
             detail="Project must be archived before it can be permanently deleted",
         )
-    # Hard delete — cascade via FK or explicit deletes
-    from sqlmodel import delete as sql_delete
-    from models.db import AgentMessage, ProjectShare, ProjectShareLink, Task, Agent
-
     for model, col in [
         (AgentMessage, AgentMessage.project_id),
         (ProjectShare, ProjectShare.project_id),

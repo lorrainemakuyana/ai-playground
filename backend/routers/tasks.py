@@ -111,8 +111,8 @@ async def cancel_task(
         raise HTTPException(status_code=400, detail=f"Cannot cancel task with status: {task.status}")
 
     await orchestrator.cancel_task(task_id, session)
-    task_result2 = await session.exec(select(Task).where(Task.id == task_id))
-    return TaskSchema.model_validate(task_result2.first())
+    await session.refresh(task)
+    return TaskSchema.model_validate(task)
 
 
 @router.post("/{project_id}/directive", response_model=TaskSchema, status_code=202)

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from models.enums import AgentRole, SDLCPhase
+from models.enums import AgentRole
 from models.db import Project
 
 BASE_CONTEXT_TEMPLATE = """\
@@ -61,14 +61,3 @@ def build_system_prompt(role: AgentRole, specialization: str, project: Project) 
     return f"{base}\n\n{get_role_instructions(role, specialization)}"
 
 
-def get_phase_context_snippet(phase: SDLCPhase) -> str:
-    """Return a short context string for the given SDLC phase."""
-    snippets = {
-        SDLCPhase.DISCOVERY: "Focus on understanding requirements and proposing solutions.",
-        SDLCPhase.ARCHITECTURE: "Focus on system design, component boundaries, and interface definitions.",
-        SDLCPhase.IMPLEMENTATION: "Focus on writing correct, maintainable code following established patterns.",
-        SDLCPhase.TESTING: "Focus on comprehensive coverage and finding edge cases.",
-        SDLCPhase.SRE_REVIEW: "Focus on production readiness, reliability, and operational concerns.",
-        SDLCPhase.DONE: "Project complete.",
-    }
-    return snippets.get(phase, "")

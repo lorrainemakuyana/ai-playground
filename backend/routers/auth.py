@@ -18,7 +18,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
-_COOKIE_MAX_AGE = 7 * 24 * 60 * 60  # 7 days in seconds
+_COOKIE_MAX_AGE = 30 * 24 * 60 * 60  # 30 days — matches ACCESS_TOKEN_EXPIRE_DAYS
 _SECURE_COOKIE = os.getenv("ENVIRONMENT", "development") == "production"
 
 

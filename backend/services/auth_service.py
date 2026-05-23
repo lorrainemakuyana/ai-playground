@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import os
 from datetime import datetime, timedelta, timezone
 
@@ -13,6 +12,7 @@ ACCESS_TOKEN_EXPIRE_DAYS = 30
 
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is not set")
+
 
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()

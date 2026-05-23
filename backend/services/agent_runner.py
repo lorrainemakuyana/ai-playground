@@ -12,8 +12,6 @@ from sqlmodel import select
 
 logger = logging.getLogger(__name__)
 
-MODEL_TECH_LEAD = "claude-sonnet-4-6"
-MODEL_DEFAULT   = "claude-sonnet-4-6"
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0
 API_TIMEOUT = 120.0  # seconds; Sonnet on complex tasks can take 60-90s
@@ -53,11 +51,7 @@ _DEFAULT_SYSTEM_PROMPTS: dict[AgentRole, str] = {
 
 
 def get_model_for_agent(agent: Agent) -> str:
-    if getattr(agent, "model_name", None):
-        return agent.model_name
-    if agent.role == AgentRole.TECH_LEAD:
-        return MODEL_TECH_LEAD
-    return MODEL_DEFAULT
+    return agent.model_name or "claude-sonnet-4-6"
 
 
 def get_system_prompt(agent: Agent) -> str:
@@ -134,43 +128,29 @@ async def run_agent_task(
     client = anthropic.AsyncAnthropic(max_retries=0, timeout=API_TIMEOUT)
     last_error: Exception | None = None
 
+    async def _stream() -> str:
+        text = ""
+        async with client.messages.stream(
+            model=model,
+            max_tokens=4096,
+            system=[{"type": "text", "text": system_prompt, "cache_control": {"type": "ephemeral"}}],
+            messages=messages,
+        ) as stream:
+            async for chunk in stream.text_stream:
+                text += chunk
+                await orchestrator.publish_event(
+                    task.project_id,
+                    {"type": "task_output_chunk", "payload": {"task_id": task.id, "chunk": chunk, "reset": False}},
+                )
+        return text
+
     for attempt in range(MAX_RETRIES):
         try:
-            accumulated = ""
-
             # Signal the frontend to clear any partial output from a previous attempt.
             await orchestrator.publish_event(
                 task.project_id,
-                {
-                    "type": "task_output_chunk",
-                    "payload": {"task_id": task.id, "chunk": "", "reset": True},
-                },
+                {"type": "task_output_chunk", "payload": {"task_id": task.id, "chunk": "", "reset": True}},
             )
-
-            async def _stream() -> str:
-                text = ""
-                async with client.messages.stream(
-                    model=model,
-                    max_tokens=4096,
-                    system=[
-                        {
-                            "type": "text",
-                            "text": system_prompt,
-                            "cache_control": {"type": "ephemeral"},
-                        }
-                    ],
-                    messages=messages,
-                ) as stream:
-                    async for chunk in stream.text_stream:
-                        text += chunk
-                        await orchestrator.publish_event(
-                            task.project_id,
-                            {
-                                "type": "task_output_chunk",
-                                "payload": {"task_id": task.id, "chunk": chunk, "reset": False},
-                            },
-                        )
-                return text
 
             accumulated = await asyncio.wait_for(_stream(), timeout=API_TIMEOUT)
 

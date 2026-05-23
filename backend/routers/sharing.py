@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlmodel import select
 
 from database import get_session
@@ -62,13 +63,13 @@ async def join_via_link(
 
     # Enforce collaborator cap
     active_count_result = await session.exec(
-        select(ProjectShare).where(
+        select(func.count(ProjectShare.id)).where(
             ProjectShare.project_id == link.project_id,
             ProjectShare.revoked_at == None,  # noqa: E711
             ProjectShare.joined_at != None,  # noqa: E711
         )
     )
-    if len(active_count_result.all()) >= _MAX_COLLABORATORS:
+    if active_count_result.one() >= _MAX_COLLABORATORS:
         raise HTTPException(
             status_code=422,
             detail=f"Project already has the maximum of {_MAX_COLLABORATORS} collaborators",
@@ -116,27 +117,14 @@ async def invite_by_email(
     if body.email.lower() == current_user.email.lower():
         raise HTTPException(status_code=422, detail="You cannot invite yourself")
 
-    # Enforce collaborator cap (active, joined only)
-    active_result = await session.exec(
-        select(ProjectShare).where(
+    # Enforce collaborator cap (active + pending, non-revoked)
+    total_result = await session.exec(
+        select(func.count(ProjectShare.id)).where(
             ProjectShare.project_id == project_id,
             ProjectShare.revoked_at == None,  # noqa: E711
-            ProjectShare.joined_at != None,  # noqa: E711
         )
     )
-    active_count = len(active_result.all())
-
-    # Also count pending (invited but not yet joined)
-    pending_result = await session.exec(
-        select(ProjectShare).where(
-            ProjectShare.project_id == project_id,
-            ProjectShare.revoked_at == None,  # noqa: E711
-            ProjectShare.joined_at == None,  # noqa: E711
-        )
-    )
-    pending_count = len(pending_result.all())
-
-    if active_count + pending_count >= _MAX_COLLABORATORS:
+    if total_result.one() >= _MAX_COLLABORATORS:
         raise HTTPException(
             status_code=422,
             detail=f"Project already has the maximum of {_MAX_COLLABORATORS} collaborators",

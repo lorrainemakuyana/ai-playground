@@ -120,9 +120,6 @@ async def list_projects(
     )
     share_rows = shares_result.all()
 
-    # Collect all project IDs to fetch counts in bulk
-    all_project_ids = [p.id for p in own_projects] + [p.id for _, p in share_rows]
-
     agent_counts_result = await session.exec(
         select(Agent.project_id, func.count(Agent.id)).group_by(Agent.project_id)
     )
@@ -225,6 +222,27 @@ async def get_project(
     )
 
 
+async def _project_summary(project: Project, session: Any) -> ProjectSummarySchema:
+    agent_count_result = await session.exec(
+        select(func.count(Agent.id)).where(Agent.project_id == project.id)
+    )
+    task_count_result = await session.exec(
+        select(func.count(Task.id)).where(Task.project_id == project.id)
+    )
+    return ProjectSummarySchema(
+        id=project.id,
+        name=project.name,
+        description=project.description,
+        status=project.status,
+        current_phase=project.current_phase,
+        created_at=project.created_at,
+        archived_at=project.archived_at,
+        agent_count=agent_count_result.one(),
+        task_count=task_count_result.one(),
+        is_owner=True,
+    )
+
+
 @router.patch("/{project_id}/archive", response_model=ProjectSummarySchema)
 async def archive_project(
     project_id: str,
@@ -238,18 +256,7 @@ async def archive_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
-    return ProjectSummarySchema(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        status=project.status,
-        current_phase=project.current_phase,
-        created_at=project.created_at,
-        archived_at=project.archived_at,
-        agent_count=0,
-        task_count=0,
-        is_owner=True,
-    )
+    return await _project_summary(project, session)
 
 
 @router.patch("/{project_id}/unarchive", response_model=ProjectSummarySchema)
@@ -265,18 +272,7 @@ async def unarchive_project(
     session.add(project)
     await session.commit()
     await session.refresh(project)
-    return ProjectSummarySchema(
-        id=project.id,
-        name=project.name,
-        description=project.description,
-        status=project.status,
-        current_phase=project.current_phase,
-        created_at=project.created_at,
-        archived_at=None,
-        agent_count=0,
-        task_count=0,
-        is_owner=True,
-    )
+    return await _project_summary(project, session)
 
 
 @router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)

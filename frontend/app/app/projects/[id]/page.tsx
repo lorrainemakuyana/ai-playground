@@ -217,7 +217,7 @@ export default function ProjectDashboardPage() {
 
         {tasks.some(t => t.status === 'done' && t.output) && (
           <a
-            href={`${process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'}/projects/${projectId}/download`}
+            href={`/api/projects/${projectId}/download`}
             download
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-950 hover:bg-primary-900 border border-primary-800 text-primary-300 transition-colors flex-none"
           >

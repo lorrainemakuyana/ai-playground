@@ -287,12 +287,13 @@ async def dispatch_task(task: Task, session: Any) -> None:
         logger.warning("dispatch_task: task %s has no role, skipping", task.id)
         return
 
-    # Find agent with matching role in this project
+    # Find agent with matching role in this project (prefer template agents, skip archived)
     result = await session.exec(
         select(Agent).where(
             Agent.project_id == task.project_id,
             Agent.role == task.role,
-        )
+            Agent.is_archived == False,  # noqa: E712
+        ).order_by(Agent.is_template_agent.desc())
     )
     agent = result.first()
 

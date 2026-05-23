@@ -6,14 +6,18 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 
 from database import get_session
-from models.db import AgentTemplate
+from dependencies import get_current_user
+from models.db import AgentTemplate, User
 from models.schemas import AgentTemplateSchema, CreateAgentTemplateRequest, UpdateAgentTemplateRequest
 
 router = APIRouter()
 
 
 @router.get("", response_model=list[AgentTemplateSchema])
-async def list_templates(session: Any = Depends(get_session)) -> list[AgentTemplateSchema]:
+async def list_templates(
+    session: Any = Depends(get_session),
+    _: User = Depends(get_current_user),
+) -> list[AgentTemplateSchema]:
     result = await session.exec(select(AgentTemplate).order_by(AgentTemplate.created_at.asc()))
     return [AgentTemplateSchema.model_validate(t) for t in result.all()]
 
@@ -22,6 +26,7 @@ async def list_templates(session: Any = Depends(get_session)) -> list[AgentTempl
 async def create_template(
     body: CreateAgentTemplateRequest,
     session: Any = Depends(get_session),
+    _: User = Depends(get_current_user),
 ) -> AgentTemplateSchema:
     tmpl = AgentTemplate(
         role=body.role,
@@ -40,6 +45,7 @@ async def update_template(
     template_id: str,
     body: UpdateAgentTemplateRequest,
     session: Any = Depends(get_session),
+    _: User = Depends(get_current_user),
 ) -> AgentTemplateSchema:
     result = await session.exec(select(AgentTemplate).where(AgentTemplate.id == template_id))
     tmpl = result.first()
@@ -65,6 +71,7 @@ async def update_template(
 async def archive_template(
     template_id: str,
     session: Any = Depends(get_session),
+    _: User = Depends(get_current_user),
 ) -> None:
     result = await session.exec(select(AgentTemplate).where(AgentTemplate.id == template_id))
     tmpl = result.first()

@@ -59,11 +59,12 @@ async def register(
             ProjectShare.revoked_at == None,  # noqa: E711
         )
     )
-    for pending in pending_result.all():
+    pending_shares = pending_result.all()
+    for pending in pending_shares:
         pending.user_id = user.id
         pending.joined_at = user.created_at
         session.add(pending)
-    if pending_result:
+    if pending_shares:
         await session.commit()
 
     token = create_access_token(user.id, user.email, user.token_version)

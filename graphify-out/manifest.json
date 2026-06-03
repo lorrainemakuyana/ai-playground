@@ -1,0 +1,542 @@
+{
+  "/Users/lorraine/Projects/ai-playground/run_tests.sh": {
+    "mtime": 1779310866.4709718,
+    "ast_hash": "aa361eeaf5061f846ce0c45c289e4050",
+    "semantic_hash": "aa361eeaf5061f846ce0c45c289e4050"
+  },
+  "/Users/lorraine/Projects/ai-playground/start.sh": {
+    "mtime": 1779310866.4710655,
+    "ast_hash": "7fa37edd1632a9e00a881c8295956b0c",
+    "semantic_hash": "7fa37edd1632a9e00a881c8295956b0c"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/middleware.ts": {
+    "mtime": 1779310866.4667943,
+    "ast_hash": "41c11c76b7fa5fd7da261667ad0e1b89",
+    "semantic_hash": "41c11c76b7fa5fd7da261667ad0e1b89"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/next.config.js": {
+    "mtime": 1779310866.4670677,
+    "ast_hash": "2cbd7085904511c875080d6d4a644b1f",
+    "semantic_hash": "2cbd7085904511c875080d6d4a644b1f"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/next-env.d.ts": {
+    "mtime": 1779310866.466934,
+    "ast_hash": "3cf36e94213e85dc306ec5f3f3760ecc",
+    "semantic_hash": "3cf36e94213e85dc306ec5f3f3760ecc"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tailwind.config.ts": {
+    "mtime": 1779310866.4680564,
+    "ast_hash": "6307fb6c623d9f9dcbddfc7a69bcc200",
+    "semantic_hash": "6307fb6c623d9f9dcbddfc7a69bcc200"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tsconfig.test.json": {
+    "mtime": 1779310866.4705434,
+    "ast_hash": "6168fb8a86577e19b1fe21a79e083084",
+    "semantic_hash": "6168fb8a86577e19b1fe21a79e083084"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/jest.setup.ts": {
+    "mtime": 1779310866.4660692,
+    "ast_hash": "994c5bf3f0f8742b450d0ab09b0d6bb9",
+    "semantic_hash": "994c5bf3f0f8742b450d0ab09b0d6bb9"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/package.json": {
+    "mtime": 1779310866.467837,
+    "ast_hash": "72a7525028fc5c01203d0d2fe80d432b",
+    "semantic_hash": "72a7525028fc5c01203d0d2fe80d432b"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tsconfig.json": {
+    "mtime": 1779310866.4693563,
+    "ast_hash": "309c1a67344e71d8ec4c34044b2e2d5d",
+    "semantic_hash": "309c1a67344e71d8ec4c34044b2e2d5d"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/postcss.config.js": {
+    "mtime": 1779310866.4679482,
+    "ast_hash": "854b38759e7a8b4b82306ae2d9a3a833",
+    "semantic_hash": "854b38759e7a8b4b82306ae2d9a3a833"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/jest.config.ts": {
+    "mtime": 1779310866.4659348,
+    "ast_hash": "f3065f52e84006c21c78ec0d4b4f507d",
+    "semantic_hash": "f3065f52e84006c21c78ec0d4b4f507d"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/__mocks__/fileMock.js": {
+    "mtime": 1779310866.4588432,
+    "ast_hash": "5cdab8570dafb06440811b0d3b5b4444",
+    "semantic_hash": "5cdab8570dafb06440811b0d3b5b4444"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/types/index.ts": {
+    "mtime": 1779570954.2843764,
+    "ast_hash": "a293f1033f14ef29d9ffcaffb9c63c71",
+    "semantic_hash": "a293f1033f14ef29d9ffcaffb9c63c71"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/layout.tsx": {
+    "mtime": 1779310866.4632196,
+    "ast_hash": "1d72d752920d99a3d5ebf7287dd26ee7",
+    "semantic_hash": "1d72d752920d99a3d5ebf7287dd26ee7"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/page.tsx": {
+    "mtime": 1779310866.4633484,
+    "ast_hash": "12aafa48df4b64c3dfe4d83dbfa28bdd",
+    "semantic_hash": "12aafa48df4b64c3dfe4d83dbfa28bdd"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/not-found.tsx": {
+    "mtime": 1779396919.0543506,
+    "ast_hash": "8b3b0da7b56aeb1a17daf2f0301a4a97",
+    "semantic_hash": "8b3b0da7b56aeb1a17daf2f0301a4a97"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/error.tsx": {
+    "mtime": 1779396919.0532372,
+    "ast_hash": "aac507b8e48ee0d8b3f9421d236a9731",
+    "semantic_hash": "aac507b8e48ee0d8b3f9421d236a9731"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/page.tsx": {
+    "mtime": 1779570954.2819297,
+    "ast_hash": "4de9dca2c7be5dc708392f9cce7a122e",
+    "semantic_hash": "4de9dca2c7be5dc708392f9cce7a122e"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/join/[token]/page.tsx": {
+    "mtime": 1779310866.4626539,
+    "ast_hash": "8fc4b701919cccc2ea6e76d8c84a7134",
+    "semantic_hash": "8fc4b701919cccc2ea6e76d8c84a7134"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/error.tsx": {
+    "mtime": 1779396919.0540893,
+    "ast_hash": "1f103e40b06d255006629a3f67a87c24",
+    "semantic_hash": "1f103e40b06d255006629a3f67a87c24"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/loading.tsx": {
+    "mtime": 1779310866.4618108,
+    "ast_hash": "7e8783a975c0bad6160c19fc360bcfc8",
+    "semantic_hash": "7e8783a975c0bad6160c19fc360bcfc8"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/page.tsx": {
+    "mtime": 1779570954.2828681,
+    "ast_hash": "b09b4e568babe9d6c2f32c7fd479cb6f",
+    "semantic_hash": "b09b4e568babe9d6c2f32c7fd479cb6f"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/agents/page.tsx": {
+    "mtime": 1779570954.28221,
+    "ast_hash": "cdc5863d3d8f73bbf782bb435771b4ff",
+    "semantic_hash": "cdc5863d3d8f73bbf782bb435771b4ff"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/_components/ShareModal.tsx": {
+    "mtime": 1779396919.0535314,
+    "ast_hash": "04c5fb9c1a5096de42658aafe21b48a3",
+    "semantic_hash": "04c5fb9c1a5096de42658aafe21b48a3"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/preview/page.tsx": {
+    "mtime": 1779570954.2831984,
+    "ast_hash": "cb5c21f6d59da5b9a7cbf629be55cd60",
+    "semantic_hash": "cb5c21f6d59da5b9a7cbf629be55cd60"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/projects/[id]/archived/page.tsx": {
+    "mtime": 1779570954.2825193,
+    "ast_hash": "38988dc11a024191d19117ecd4f578be",
+    "semantic_hash": "38988dc11a024191d19117ecd4f578be"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/agents/page.tsx": {
+    "mtime": 1779570954.2816784,
+    "ast_hash": "5396c015d9f248696c3147020c605bcc",
+    "semantic_hash": "5396c015d9f248696c3147020c605bcc"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/_components/RevokedProjectCard.tsx": {
+    "mtime": 1779310866.4601824,
+    "ast_hash": "c1a22ee85989ebd13290698640f7fd5e",
+    "semantic_hash": "c1a22ee85989ebd13290698640f7fd5e"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/_components/NewProjectForm.tsx": {
+    "mtime": 1779310866.4600158,
+    "ast_hash": "e18ad5eab453af212d56e265364ac7b2",
+    "semantic_hash": "e18ad5eab453af212d56e265364ac7b2"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/_components/ArchivedProjectCard.tsx": {
+    "mtime": 1779570954.2813778,
+    "ast_hash": "46325544011abd3efc3b0c2894057f5a",
+    "semantic_hash": "46325544011abd3efc3b0c2894057f5a"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/app/_components/ActiveProjectCard.tsx": {
+    "mtime": 1779570954.281115,
+    "ast_hash": "53535ad5aa722601a47f4555d9a70cdc",
+    "semantic_hash": "53535ad5aa722601a47f4555d9a70cdc"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/app/auth/page.tsx": {
+    "mtime": 1779310866.462932,
+    "ast_hash": "c13ce590d2d9705a2a5879b95991c0b8",
+    "semantic_hash": "c13ce590d2d9705a2a5879b95991c0b8"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/components/StatusBadge.test.tsx": {
+    "mtime": 1779310866.4685345,
+    "ast_hash": "43362b30db368df903080896e7ad5e82",
+    "semantic_hash": "43362b30db368df903080896e7ad5e82"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/components/AgentCard.test.tsx": {
+    "mtime": 1779310866.4684045,
+    "ast_hash": "fef032fd41cd8b4d272f1ad682559b42",
+    "semantic_hash": "fef032fd41cd8b4d272f1ad682559b42"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/components/AddAgentModal.test.tsx": {
+    "mtime": 1779310866.468276,
+    "ast_hash": "f1f16075beb05de3db759beaff27536b",
+    "semantic_hash": "f1f16075beb05de3db759beaff27536b"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/components/TaskFeed.test.tsx": {
+    "mtime": 1779310866.468743,
+    "ast_hash": "dadd77ffdb7facf8fa5e979a0f57f913",
+    "semantic_hash": "dadd77ffdb7facf8fa5e979a0f57f913"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/lib/utils.test.ts": {
+    "mtime": 1779310866.46911,
+    "ast_hash": "43b024435eeb87232f666a8a19539b04",
+    "semantic_hash": "43b024435eeb87232f666a8a19539b04"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/tests/lib/auth.test.ts": {
+    "mtime": 1779310866.4689012,
+    "ast_hash": "bc24953e4c10a3dd0b832194e9dd5f5b",
+    "semantic_hash": "bc24953e4c10a3dd0b832194e9dd5f5b"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/TaskFeed.tsx": {
+    "mtime": 1779570954.2836006,
+    "ast_hash": "bc74168ee9e2b239f7ab2a4e0f55ce35",
+    "semantic_hash": "bc74168ee9e2b239f7ab2a4e0f55ce35"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/AgentCard.tsx": {
+    "mtime": 1779570954.2833858,
+    "ast_hash": "9f5043e643233fea4752f370bd681965",
+    "semantic_hash": "9f5043e643233fea4752f370bd681965"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/StatusBadge.tsx": {
+    "mtime": 1779310866.4654675,
+    "ast_hash": "4c07f23b1ef5b31461a3d841e14bea48",
+    "semantic_hash": "4c07f23b1ef5b31461a3d841e14bea48"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/AddAgentModal.tsx": {
+    "mtime": 1779310866.4647145,
+    "ast_hash": "f7fddc0a506ef69bbf779146a7210e77",
+    "semantic_hash": "f7fddc0a506ef69bbf779146a7210e77"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/AgentOutputDrawer.tsx": {
+    "mtime": 1779310866.4650435,
+    "ast_hash": "9fd39e32e93ce8735474e1cde88eb3cd",
+    "semantic_hash": "9fd39e32e93ce8735474e1cde88eb3cd"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/PhaseTracker.tsx": {
+    "mtime": 1779310866.465219,
+    "ast_hash": "c9b23e5276628e8860c17bceb0fe5ee7",
+    "semantic_hash": "c9b23e5276628e8860c17bceb0fe5ee7"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/components/Spinner.tsx": {
+    "mtime": 1779310866.4653442,
+    "ast_hash": "c6f4b65b36b8f0e2ec1fc9785015728f",
+    "semantic_hash": "c6f4b65b36b8f0e2ec1fc9785015728f"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/hooks/useProjectStream.ts": {
+    "mtime": 1779570954.2838473,
+    "ast_hash": "8728ae73365c57c7eaaee1d9ffdb4697",
+    "semantic_hash": "8728ae73365c57c7eaaee1d9ffdb4697"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/lib/utils.ts": {
+    "mtime": 1779310866.466649,
+    "ast_hash": "4a4227e71556030b1b2214058a2d77c7",
+    "semantic_hash": "4a4227e71556030b1b2214058a2d77c7"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/lib/api.ts": {
+    "mtime": 1779570954.2841222,
+    "ast_hash": "7607b94d744003c3839820f19719726b",
+    "semantic_hash": "7607b94d744003c3839820f19719726b"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/lib/constants.ts": {
+    "mtime": 1779310866.466527,
+    "ast_hash": "b76ba9942dd29dec945939e0915717be",
+    "semantic_hash": "b76ba9942dd29dec945939e0915717be"
+  },
+  "/Users/lorraine/Projects/ai-playground/frontend/lib/auth.ts": {
+    "mtime": 1779310866.4663966,
+    "ast_hash": "69e2c72b8b94010d4bc01902971f824f",
+    "semantic_hash": "69e2c72b8b94010d4bc01902971f824f"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/settings.local.json": {
+    "mtime": 1779528575.5054147,
+    "ast_hash": "b7143eeb06aed891a9f2e0723f86fb82",
+    "semantic_hash": "b7143eeb06aed891a9f2e0723f86fb82"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/database.py": {
+    "mtime": 1779570954.2754393,
+    "ast_hash": "203e93653164a48f035df310f00b0347",
+    "semantic_hash": "203e93653164a48f035df310f00b0347"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/seed.py": {
+    "mtime": 1779310866.4525328,
+    "ast_hash": "0fe1f36d392edf1ccdbd61322a8bc743",
+    "semantic_hash": "0fe1f36d392edf1ccdbd61322a8bc743"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/main.py": {
+    "mtime": 1779570954.2761796,
+    "ast_hash": "3e05de808d6a80349a8ad77220c85a0c",
+    "semantic_hash": "3e05de808d6a80349a8ad77220c85a0c"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/dependencies.py": {
+    "mtime": 1779310866.44788,
+    "ast_hash": "6aba1dacc99e11de26c0b6f2e2172f70",
+    "semantic_hash": "6aba1dacc99e11de26c0b6f2e2172f70"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/auth.py": {
+    "mtime": 1779570954.2780833,
+    "ast_hash": "2b373976baf59581403070fa672cea04",
+    "semantic_hash": "2b373976baf59581403070fa672cea04"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/sharing.py": {
+    "mtime": 1779570954.2787075,
+    "ast_hash": "0eff586a757b6adfc2dc9f1027a621d0",
+    "semantic_hash": "0eff586a757b6adfc2dc9f1027a621d0"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/tasks.py": {
+    "mtime": 1779570954.278896,
+    "ast_hash": "77c524b6fe39b57387c66017b9236a5b",
+    "semantic_hash": "77c524b6fe39b57387c66017b9236a5b"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/__init__.py": {
+    "mtime": 1779310866.45042,
+    "ast_hash": "e9151bc9598a9062ff547f0bdfcbbe63",
+    "semantic_hash": "e9151bc9598a9062ff547f0bdfcbbe63"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/agent_templates.py": {
+    "mtime": 1779570954.2776337,
+    "ast_hash": "7654242fe6dba2d326ca52aae98a5b0d",
+    "semantic_hash": "7654242fe6dba2d326ca52aae98a5b0d"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/stream.py": {
+    "mtime": 1779310866.4520955,
+    "ast_hash": "75d62bf0f9e25033aa4ea7beacde7661",
+    "semantic_hash": "75d62bf0f9e25033aa4ea7beacde7661"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/downloads.py": {
+    "mtime": 1779570954.2782636,
+    "ast_hash": "20d07a4cc57c88d3ec599282d25b36f3",
+    "semantic_hash": "20d07a4cc57c88d3ec599282d25b36f3"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/agents.py": {
+    "mtime": 1779570954.2779152,
+    "ast_hash": "5ed3d3646ecf4af0ead7b9ef5e747454",
+    "semantic_hash": "5ed3d3646ecf4af0ead7b9ef5e747454"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/routers/projects.py": {
+    "mtime": 1779570954.2784865,
+    "ast_hash": "091d28d8efa1726c303b44d94e45d41b",
+    "semantic_hash": "091d28d8efa1726c303b44d94e45d41b"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/conftest.py": {
+    "mtime": 1779310866.4554865,
+    "ast_hash": "53f6d9245375edc7f3a956b2bdb80dde",
+    "semantic_hash": "53f6d9245375edc7f3a956b2bdb80dde"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/__init__.py": {
+    "mtime": 1779310866.4552505,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/test_auth.py": {
+    "mtime": 1779570954.2803726,
+    "ast_hash": "84104dc1a2116e773047479c3c163ecc",
+    "semantic_hash": "84104dc1a2116e773047479c3c163ecc"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/__init__.py": {
+    "mtime": 1779310866.4555175,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/test_projects.py": {
+    "mtime": 1779570954.2806435,
+    "ast_hash": "a45eb7ff783741261a780a3d98514b8a",
+    "semantic_hash": "a45eb7ff783741261a780a3d98514b8a"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/test_tasks.py": {
+    "mtime": 1779570954.280811,
+    "ast_hash": "2f6e8466a1348b78f87a83c56bf618c6",
+    "semantic_hash": "2f6e8466a1348b78f87a83c56bf618c6"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/test_agent_templates.py": {
+    "mtime": 1779570954.2800162,
+    "ast_hash": "ff2ff9c18058c5a059643d118f807331",
+    "semantic_hash": "ff2ff9c18058c5a059643d118f807331"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/routers/test_agents.py": {
+    "mtime": 1779570954.2802074,
+    "ast_hash": "6772a3731fc6db537a9af670f3342b10",
+    "semantic_hash": "6772a3731fc6db537a9af670f3342b10"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/services/__init__.py": {
+    "mtime": 1779310866.4573226,
+    "ast_hash": "d41d8cd98f00b204e9800998ecf8427e",
+    "semantic_hash": "d41d8cd98f00b204e9800998ecf8427e"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/services/test_orchestrator.py": {
+    "mtime": 1779310866.457505,
+    "ast_hash": "742284fd61c46425b8ecb3f806688e21",
+    "semantic_hash": "742284fd61c46425b8ecb3f806688e21"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/tests/services/test_prompt_builder.py": {
+    "mtime": 1779310866.4576344,
+    "ast_hash": "8e00bc98b530aa9024dd9e4db2d103aa",
+    "semantic_hash": "8e00bc98b530aa9024dd9e4db2d103aa"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/models/db.py": {
+    "mtime": 1779310866.449142,
+    "ast_hash": "4b5579677ead9d76607f78a6a769de64",
+    "semantic_hash": "4b5579677ead9d76607f78a6a769de64"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/models/enums.py": {
+    "mtime": 1779310866.4492764,
+    "ast_hash": "5158acf8ea63ce9a8b01d4904602c775",
+    "semantic_hash": "5158acf8ea63ce9a8b01d4904602c775"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/models/__init__.py": {
+    "mtime": 1779570954.2766025,
+    "ast_hash": "cfba601d632b564c27fc5fe5d1eb39a0",
+    "semantic_hash": "cfba601d632b564c27fc5fe5d1eb39a0"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/models/schemas.py": {
+    "mtime": 1779570954.276887,
+    "ast_hash": "c3a88b7f8b60d4197b834ebf9c3365f8",
+    "semantic_hash": "c3a88b7f8b60d4197b834ebf9c3365f8"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/auth_service.py": {
+    "mtime": 1779570954.27926,
+    "ast_hash": "ce66a69106aa3bf1f50c09671112ea34",
+    "semantic_hash": "ce66a69106aa3bf1f50c09671112ea34"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/prompt_builder.py": {
+    "mtime": 1779570954.2797685,
+    "ast_hash": "cdaba5615827c5f95e45fccbb173520f",
+    "semantic_hash": "cdaba5615827c5f95e45fccbb173520f"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/file_parser.py": {
+    "mtime": 1779310866.454349,
+    "ast_hash": "90609c7271c9aadc74d34b3a6e1817c5",
+    "semantic_hash": "90609c7271c9aadc74d34b3a6e1817c5"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/agent_runner.py": {
+    "mtime": 1779570954.2790973,
+    "ast_hash": "e383a49946e0ab5f98816fb86d9444fe",
+    "semantic_hash": "e383a49946e0ab5f98816fb86d9444fe"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/__init__.py": {
+    "mtime": 1779310866.4533463,
+    "ast_hash": "7b404985b68839310cd7e8b1878c2e30",
+    "semantic_hash": "7b404985b68839310cd7e8b1878c2e30"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/services/orchestrator.py": {
+    "mtime": 1779570954.2795792,
+    "ast_hash": "daee1b1fb023743117466fee8c9a0f07",
+    "semantic_hash": "daee1b1fb023743117466fee8c9a0f07"
+  },
+  "/Users/lorraine/Projects/ai-playground/README.md": {
+    "mtime": 1779310866.447082,
+    "ast_hash": "469487694e197769c3cdae03220e525a",
+    "semantic_hash": "469487694e197769c3cdae03220e525a"
+  },
+  "/Users/lorraine/Projects/ai-playground/PLAN.md": {
+    "mtime": 1779310866.4469411,
+    "ast_hash": "086fcf8ad47212fc59c2a3e4e7948caf",
+    "semantic_hash": "086fcf8ad47212fc59c2a3e4e7948caf"
+  },
+  "/Users/lorraine/Projects/ai-playground/CLAUDE.md": {
+    "mtime": 1779728379.4195628,
+    "ast_hash": "89f453a5aa2dc957fdced49955a26a5a",
+    "semantic_hash": "89f453a5aa2dc957fdced49955a26a5a"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/design/SKILL.md": {
+    "mtime": 1779310866.443724,
+    "ast_hash": "bce1eab7bbf5d40ec12dd8451f1efbb4",
+    "semantic_hash": "bce1eab7bbf5d40ec12dd8451f1efbb4"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/setup-cicd/SKILL.md": {
+    "mtime": 1779310866.4454238,
+    "ast_hash": "3b7e3837344430a6f7271b40d757ab79",
+    "semantic_hash": "3b7e3837344430a6f7271b40d757ab79"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/test/SKILL.md": {
+    "mtime": 1779310866.44561,
+    "ast_hash": "86c07589a6e341aa0b062059c7fa4b69",
+    "semantic_hash": "86c07589a6e341aa0b062059c7fa4b69"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/plan/SKILL.md": {
+    "mtime": 1779310866.4451833,
+    "ast_hash": "8f0c48560e4c6ca96eb8ce30f4852380",
+    "semantic_hash": "8f0c48560e4c6ca96eb8ce30f4852380"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/deploy/SKILL.md": {
+    "mtime": 1779310866.4434907,
+    "ast_hash": "e73973b4a36a1c0b7a1b9612f1a27f91",
+    "semantic_hash": "e73973b4a36a1c0b7a1b9612f1a27f91"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/implement-frontend/SKILL.md": {
+    "mtime": 1779310866.4444008,
+    "ast_hash": "761ce9464504338b9b4d2dc1df5c44cc",
+    "semantic_hash": "761ce9464504338b9b4d2dc1df5c44cc"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/orchestrate-update/SKILL.md": {
+    "mtime": 1779310866.444766,
+    "ast_hash": "34381af78935a69fc444f620013b7545",
+    "semantic_hash": "34381af78935a69fc444f620013b7545"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/orchestrate/SKILL.md": {
+    "mtime": 1779310866.4449883,
+    "ast_hash": "48eddc8542e287f3a50753cfc9bc5618",
+    "semantic_hash": "48eddc8542e287f3a50753cfc9bc5618"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/implement-backend/SKILL.md": {
+    "mtime": 1779310866.4439805,
+    "ast_hash": "de222ea452dab88d0b13c56231d4e0d6",
+    "semantic_hash": "de222ea452dab88d0b13c56231d4e0d6"
+  },
+  "/Users/lorraine/Projects/ai-playground/.claude/skills/orchestrate-status/SKILL.md": {
+    "mtime": 1779310866.44459,
+    "ast_hash": "34257aba66fb05d6ae8801c87f4036a6",
+    "semantic_hash": "34257aba66fb05d6ae8801c87f4036a6"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/requirements.txt": {
+    "mtime": 1779310866.4502873,
+    "ast_hash": "897e11e39cb628838c64fb31c5609c8d",
+    "semantic_hash": "897e11e39cb628838c64fb31c5609c8d"
+  },
+  "/Users/lorraine/Projects/ai-playground/backend/requirements-test.txt": {
+    "mtime": 1779310866.4497654,
+    "ast_hash": "6840d032908aabee97ccf753a21adc73",
+    "semantic_hash": "6840d032908aabee97ccf753a21adc73"
+  },
+  "/Users/lorraine/Projects/ai-playground/docs/ARCHITECTURE.md": {
+    "mtime": 1779310866.457954,
+    "ast_hash": "63fcb0b4a3895224617162a33a2f663b",
+    "semantic_hash": "63fcb0b4a3895224617162a33a2f663b"
+  },
+  "/Users/lorraine/Projects/ai-playground/docs/DESIGN_SPEC.md": {
+    "mtime": 1779310866.458321,
+    "ast_hash": "54fa1af02d6900973549e86df4dade14",
+    "semantic_hash": "54fa1af02d6900973549e86df4dade14"
+  },
+  "/Users/lorraine/Projects/ai-playground/docs/PLAN.md": {
+    "mtime": 1779310866.458668,
+    "ast_hash": "502e4411e520ad91d5eddb83e5f9dce7",
+    "semantic_hash": "502e4411e520ad91d5eddb83e5f9dce7"
+  },
+  "/Users/lorraine/Projects/ai-playground/.github/workflows/deploy-frontend.yml": {
+    "mtime": 1779310866.4462826,
+    "ast_hash": "451f68e711fd41bb1ca6528d46196da1",
+    "semantic_hash": "451f68e711fd41bb1ca6528d46196da1"
+  },
+  "/Users/lorraine/Projects/ai-playground/.github/workflows/deploy-backend.yml": {
+    "mtime": 1779310866.4461226,
+    "ast_hash": "67d1dc28436541e62f878b9204f80cf0",
+    "semantic_hash": "67d1dc28436541e62f878b9204f80cf0"
+  },
+  "/Users/lorraine/Projects/ai-playground/.github/workflows/ci.yml": {
+    "mtime": 1779728003.0790377,
+    "ast_hash": "1913bb98703b0fed21058e9e415c7233",
+    "semantic_hash": "1913bb98703b0fed21058e9e415c7233"
+  },
+  "/Users/lorraine/Projects/ai-playground/.github/workflows/graph.yml": {
+    "mtime": 1779728009.902189,
+    "ast_hash": "55955a97d3a60f896430587c92108e57",
+    "semantic_hash": "55955a97d3a60f896430587c92108e57"
+  }
+}

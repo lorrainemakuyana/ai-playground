@@ -1,0 +1,36 @@
+name: Update Knowledge Graph
+
+on:
+  push:
+    branches: [develop, main]
+
+jobs:
+  update-graph:
+    name: Update Knowledge Graph
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install graphify
+        run: pip install graphifyy -q
+
+      - name: Update graph
+        run: graphify extract . --backend claude-cli
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Commit updated graph
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add graphify-out/graph.json graphify-out/GRAPH_REPORT.md
+          git diff --cached --quiet || git commit -m "chore: update knowledge graph [skip ci]"
+          git push

@@ -33,6 +33,17 @@ Read every user prompt and invoke the most appropriate skill **before** doing an
 - **Start servers**: `./start.sh`
 - **Run all tests**: `./run_tests.sh`
 
+## Knowledge graph
+
+- `graphify-out/graph.json` is pre-built — **never re-extract the full codebase**. Use it directly.
+- At the start of every session, run `graphify query "<question>"` to answer codebase questions instead of reading files manually.
+- To update the graph after code changes, run `graphify extract . --update` (incremental only).
+
+## Security rules
+
+- Never print, log, or reveal the value of any environment variable, API key, secret, or token — not in responses, not in commit messages, not in files.
+- If a command or tool output exposes a key or secret, redact it before showing the user.
+
 ## Commit rules
 
 - Never add `Co-Authored-By: Claude` trailers to commit messages.

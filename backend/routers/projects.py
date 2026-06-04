@@ -39,7 +39,9 @@ async def create_project(
 
     # Seed agents from global templates (fall back to hard-coded defaults if none exist)
     templates_result = await session.exec(
-        select(AgentTemplate).where(AgentTemplate.is_active == True).order_by(AgentTemplate.created_at.asc())
+        select(AgentTemplate)
+        .where(AgentTemplate.is_active == True, AgentTemplate.user_id == current_user.id)
+        .order_by(AgentTemplate.created_at.asc())
     )
     templates = templates_result.all()
 
@@ -214,7 +216,7 @@ async def get_project(
         status=project.status,
         current_phase=project.current_phase,
         created_at=project.created_at,
-        is_owner=(project.user_id is None or project.user_id == current_user.id),
+        is_owner=(project.user_id == current_user.id),
         agents=[AgentSchema.model_validate(a) for a in agents],
         tasks=[TaskSchema.model_validate(t) for t in tasks],
         messages=[AgentMessageSchema.model_validate(m) for m in messages],

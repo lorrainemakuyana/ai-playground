@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { login, register } from '@/lib/api'
-import { setToken } from '@/lib/auth'
 
 export default function AuthPage() {
   const router = useRouter()
@@ -28,10 +27,13 @@ export default function AuthPage() {
 
     setLoading(true)
     try {
-      const data = mode === 'login'
-        ? await login(email, password)
-        : await register(email, password)
-      setToken(data.access_token)
+      // The backend sets the httponly auth cookie on the response; nothing to
+      // store client-side.
+      if (mode === 'login') {
+        await login(email, password)
+      } else {
+        await register(email, password)
+      }
       const next = searchParams.get('next') ?? '/app'
       const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/app'
       router.push(safeNext)

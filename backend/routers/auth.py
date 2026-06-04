@@ -4,17 +4,14 @@ import os
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from sqlmodel import select
 
-from database import get_session
+from database import get_session, seed_default_templates_for_user
 from dependencies import get_current_user
 from models.db import ProjectShare, User
 from models.schemas import LoginRequest, RegisterRequest, TokenResponse
+from rate_limit import limiter
 from services.auth_service import create_access_token, hash_password, verify_password
-
-limiter = Limiter(key_func=get_remote_address)
 
 router = APIRouter()
 
@@ -28,7 +25,7 @@ def _set_auth_cookie(response: Response, token: str) -> None:
         value=token,
         max_age=_COOKIE_MAX_AGE,
         path="/",
-        httponly=False,   # JS-readable so client components can add Authorization header
+        httponly=True,    # not JS-readable; sent automatically on same-origin /api requests
         samesite="lax",
         secure=_SECURE_COOKIE,
     )
@@ -50,6 +47,10 @@ async def register(
     session.add(user)
     await session.commit()
     await session.refresh(user)
+
+    # Give the new user their own default engineering team to customize
+    await seed_default_templates_for_user(user.id, session)
+    await session.commit()
 
     # Activate any pending email invites for this address
     pending_result = await session.exec(

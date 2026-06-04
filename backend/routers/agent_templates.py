@@ -16,9 +16,13 @@ router = APIRouter()
 @router.get("", response_model=list[AgentTemplateSchema])
 async def list_templates(
     session: Any = Depends(get_session),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> list[AgentTemplateSchema]:
-    result = await session.exec(select(AgentTemplate).order_by(AgentTemplate.created_at.asc()))
+    result = await session.exec(
+        select(AgentTemplate)
+        .where(AgentTemplate.user_id == current_user.id)
+        .order_by(AgentTemplate.created_at.asc())
+    )
     return [AgentTemplateSchema.model_validate(t) for t in result.all()]
 
 
@@ -26,9 +30,10 @@ async def list_templates(
 async def create_template(
     body: CreateAgentTemplateRequest,
     session: Any = Depends(get_session),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AgentTemplateSchema:
     tmpl = AgentTemplate(
+        user_id=current_user.id,
         role=body.role,
         specialization=body.specialization,
         model_name=body.model_name,
@@ -45,9 +50,14 @@ async def update_template(
     template_id: str,
     body: UpdateAgentTemplateRequest,
     session: Any = Depends(get_session),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> AgentTemplateSchema:
-    result = await session.exec(select(AgentTemplate).where(AgentTemplate.id == template_id))
+    result = await session.exec(
+        select(AgentTemplate).where(
+            AgentTemplate.id == template_id,
+            AgentTemplate.user_id == current_user.id,
+        )
+    )
     tmpl = result.first()
     if not tmpl:
         raise HTTPException(status_code=404, detail="Template not found")
@@ -71,9 +81,14 @@ async def update_template(
 async def archive_template(
     template_id: str,
     session: Any = Depends(get_session),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> None:
-    result = await session.exec(select(AgentTemplate).where(AgentTemplate.id == template_id))
+    result = await session.exec(
+        select(AgentTemplate).where(
+            AgentTemplate.id == template_id,
+            AgentTemplate.user_id == current_user.id,
+        )
+    )
     tmpl = result.first()
     if not tmpl:
         raise HTTPException(status_code=404, detail="Template not found")

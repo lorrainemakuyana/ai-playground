@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlmodel import select
 
 from database import get_session
-from dependencies import get_accessible_project, get_current_user, get_owned_project
+from dependencies import get_accessible_project, get_current_user
 from models.db import Task, User
 from models.enums import SDLCPhase, TaskStatus
 from models.schemas import TaskSchema, DirectiveRequest
@@ -68,7 +68,7 @@ async def cancel_task(
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> TaskSchema:
-    await get_owned_project(project_id, current_user, session)
+    await get_accessible_project(project_id, current_user, session)
     task_result = await session.exec(
         select(Task).where(Task.id == task_id, Task.project_id == project_id)
     )

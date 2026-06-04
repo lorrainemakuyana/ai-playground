@@ -51,8 +51,7 @@ async def get_owned_project(
     project = result.first()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    # user_id may be None for legacy projects created before auth was added
-    if project.user_id is not None and project.user_id != current_user.id:
+    if project.user_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
     return project
 
@@ -68,7 +67,7 @@ async def get_accessible_project(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    if project.user_id is None or project.user_id == current_user.id:
+    if project.user_id == current_user.id:
         return project
 
     share_result = await session.exec(

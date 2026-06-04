@@ -1,3 +1,13 @@
+"""Orchestration engine and in-process event bus.
+
+NOTE: Event delivery and task cancellation rely on the module-level
+``_project_subscribers`` and ``_running_tasks`` dicts, which live in a single
+process's memory. The app must therefore run with a SINGLE worker
+(``uvicorn`` without ``--workers``). Running multiple workers/processes would
+mean SSE events and cancellations only reach clients on the same worker. For
+horizontal scaling this would need an external broker (e.g. Redis pub/sub).
+"""
+
 from __future__ import annotations
 
 import asyncio
@@ -16,8 +26,11 @@ from models.schemas import AgentMessageSchema, TaskSchema
 
 logger = logging.getLogger(__name__)
 
-# Module-level dict: one asyncio.Queue per project_id
-_project_queues: dict[str, asyncio.Queue] = {}
+# project_id → set of subscriber queues (one per connected SSE client). Events
+# are fanned out to every subscriber so multiple collaborators viewing the same
+# project all receive every event. Events published with no subscribers are
+# dropped, so idle projects don't accumulate an unbounded backlog.
+_project_subscribers: dict[str, set[asyncio.Queue]] = {}
 
 # task_id → running asyncio.Task, so we can cancel on demand
 _running_tasks: dict[str, asyncio.Task] = {}
@@ -33,11 +46,20 @@ _PHASE_ORDER = [
 ]
 
 
-def get_or_create_queue(project_id: str) -> asyncio.Queue:
-    """Return the existing queue for project_id or create a new one."""
-    if project_id not in _project_queues:
-        _project_queues[project_id] = asyncio.Queue()
-    return _project_queues[project_id]
+def subscribe(project_id: str) -> asyncio.Queue:
+    """Register a new subscriber queue for a project and return it."""
+    queue: asyncio.Queue = asyncio.Queue()
+    _project_subscribers.setdefault(project_id, set()).add(queue)
+    return queue
+
+
+def unsubscribe(project_id: str, queue: asyncio.Queue) -> None:
+    """Remove a subscriber queue; drop the project entry once it has none."""
+    subscribers = _project_subscribers.get(project_id)
+    if subscribers is not None:
+        subscribers.discard(queue)
+        if not subscribers:
+            _project_subscribers.pop(project_id, None)
 
 
 def get_phase_task_templates(phase: SDLCPhase) -> list[dict[str, Any]]:
@@ -176,9 +198,9 @@ async def _seed_tasks(project_id: str, phase: SDLCPhase, session: Any) -> list[T
 
 
 async def publish_event(project_id: str, event: dict[str, Any]) -> None:
-    """Push an event to the project's queue."""
-    queue = get_or_create_queue(project_id)
-    await queue.put(event)
+    """Fan an event out to every connected subscriber for the project."""
+    for queue in list(_project_subscribers.get(project_id, ())):
+        queue.put_nowait(event)
 
 
 async def start_project(project_id: str, session: Any) -> None:
@@ -349,6 +371,7 @@ async def dispatch_task(task: Task, session: Any) -> None:
         project_id=agent.project_id,
         role=agent.role,
         specialization=agent.specialization,
+        model_name=agent.model_name,
         system_prompt=agent.system_prompt,
         status=agent.status,
     )
@@ -660,7 +683,7 @@ async def handle_agent_failure(
 
 async def stream_events(project_id: str) -> AsyncIterator[str]:
     """Async generator yielding SSE-formatted event strings for a project."""
-    queue = get_or_create_queue(project_id)
+    queue = subscribe(project_id)
     try:
         while True:
             try:
@@ -676,14 +699,15 @@ async def stream_events(project_id: str) -> AsyncIterator[str]:
 
             yield f"data: {json.dumps(event)}\n\n"
 
-            # Stop when the project reaches DONE phase and free the queue
+            # Stop streaming to this client once the project reaches DONE phase
             if (
                 event.get("type") == "phase_change"
                 and event.get("payload", {}).get("new_phase") == SDLCPhase.DONE.value
             ):
-                _project_queues.pop(project_id, None)
                 break
 
     except asyncio.CancelledError:
         logger.info("stream_events: client disconnected for project %s", project_id)
         raise
+    finally:
+        unsubscribe(project_id, queue)

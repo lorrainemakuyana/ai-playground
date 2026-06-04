@@ -29,10 +29,11 @@ class User(SQLModel, table=True):
 
 
 class AgentTemplate(SQLModel, table=True):
-    """Global default engineering team — copied into every new project."""
+    """A user's default engineering team — copied into each of their new projects."""
     __tablename__ = "agent_templates"
 
     id: str = Field(default_factory=_new_uuid, primary_key=True)
+    user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     role: AgentRole
     specialization: str
     model_name: str = Field(default="claude-sonnet-4-6")

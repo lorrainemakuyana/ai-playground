@@ -63,6 +63,11 @@ async def test_create_template_specialization_required(client):
     assert resp.status_code == 422
 
 
+async def test_create_template_rejects_arbitrary_model_name(client):
+    resp = await client.post("/agent-templates", json={**TEMPLATE_BASE, "model_name": "gpt-4o"})
+    assert resp.status_code == 422
+
+
 # ---------------------------------------------------------------------------
 # PATCH /agent-templates/{id}
 # ---------------------------------------------------------------------------

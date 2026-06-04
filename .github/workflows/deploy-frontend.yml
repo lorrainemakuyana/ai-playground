@@ -29,7 +29,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          NEXT_PUBLIC_API_URL: ${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
+          # Baked into the Next.js /api/* rewrite at build time (see next.config.js)
+          API_URL: ${{ github.ref == 'refs/heads/main' && secrets.PROD_API_URL || secrets.STAGING_API_URL }}
 
       - name: Deploy to Netlify (preview)
         if: github.ref == 'refs/heads/develop'

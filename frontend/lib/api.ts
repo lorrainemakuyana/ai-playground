@@ -14,21 +14,16 @@ export class ApiError extends Error {
   }
 }
 
-function getStoredToken(): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = getStoredToken()
+  // Auth travels in the httponly `auth_token` cookie, which the browser sends
+  // automatically on these same-origin /api requests — no Authorization header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
+      credentials: 'same-origin',
       headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
     })
   } catch {

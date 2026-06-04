@@ -1,16 +1,15 @@
+import os
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from database import init_db
+from rate_limit import limiter
 from routers import projects, agents, tasks, stream, downloads, agent_templates, auth, sharing
-
-limiter = Limiter(key_func=get_remote_address)
 
 
 @asynccontextmanager
@@ -23,9 +22,15 @@ app = FastAPI(title="SDLC Orchestrator", lifespan=lifespan, redirect_slashes=Fal
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Allowed CORS origins are driven by env so production hosts can be configured.
+# FRONTEND_URL may be a single origin or a comma-separated list.
+_allowed_origins = [
+    o.strip() for o in os.getenv("FRONTEND_URL", "http://localhost:3000").split(",") if o.strip()
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

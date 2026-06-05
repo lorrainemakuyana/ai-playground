@@ -41,13 +41,13 @@ class PlanLimit(TypedDict):
 PLAN_LIMITS: dict[PlanTier, PlanLimit] = {
     PlanTier.FREE: {
         "projects": 2,
-        "agents_per_project": 3,
+        "agents_per_project": 2,
         "allowed_families": frozenset({"haiku"}),
         "sharing": False,
     },
     PlanTier.PRO: {
-        "projects": 10,
-        "agents_per_project": 8,
+        "projects": 5,
+        "agents_per_project": 5,
         "allowed_families": frozenset({"haiku", "sonnet"}),
         "sharing": True,
     },

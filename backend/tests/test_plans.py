@@ -52,9 +52,9 @@ def test_ultra_limits_are_unlimited():
 
 def test_numeric_limits():
     assert plans.project_limit(PlanTier.FREE) == 2
-    assert plans.agent_limit(PlanTier.FREE) == 3
-    assert plans.project_limit(PlanTier.PRO) == 10
-    assert plans.agent_limit(PlanTier.PRO) == 8
+    assert plans.agent_limit(PlanTier.FREE) == 2
+    assert plans.project_limit(PlanTier.PRO) == 5
+    assert plans.agent_limit(PlanTier.PRO) == 5
 
 
 # ---------------------------------------------------------------------------

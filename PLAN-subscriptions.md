@@ -8,10 +8,13 @@ Introduce three plan tiers — Free, Pro, and Ultra — that gate the number of 
 
 | | Free | Pro | Ultra |
 |---|---|---|---|
-| Projects | 2 | 10 | Unlimited |
-| Agents per project | 3 | 8 | Unlimited |
+| Max projects | 2 | 5 | Unlimited |
+| Agents per project | 2 | 5 | Unlimited |
 | Models | Haiku only | Haiku, Sonnet | Haiku, Sonnet, Opus |
 | Project sharing | — | ✓ | ✓ |
+| Price / mo | Free | £14.99 / $19.99 | £39.99 / $59.99 |
+
+> Archived projects still count toward the project limit — only a hard delete frees a slot.
 
 ---
 
@@ -55,7 +58,7 @@ Introduce three plan tiers — Free, Pro, and Ultra — that gate the number of 
 - [ ] The frontend surfaces this as an upgrade modal (not a generic error toast).
 
 ### US-2 — Free agent limit
-- [ ] `POST /projects/{id}/agents` returns `HTTP 403` with `{"detail": "Free plan limit: 3 agents per project"}` when the project already has 3 agents.
+- [ ] `POST /projects/{id}/agents` returns `HTTP 403` with `{"detail": "Free plan limit: 2 agents per project"}` when the project already has 2 agents.
 - [ ] The frontend surfaces this as an upgrade modal.
 
 ### US-3 — Server-side enforcement

@@ -2,7 +2,6 @@
 
 import { useSyncExternalStore, useCallback } from 'react'
 import type { Currency } from '@/types'
-import { USD_PER_GBP } from '@/lib/constants'
 
 const STORAGE_KEY = 'preferred_currency'
 
@@ -45,14 +44,11 @@ export function useCurrency(): UseCurrencyResult {
   const toggle = useCallback(() => setStored(readStored() === 'USD' ? 'GBP' : 'USD'), [])
 
   const format = useCallback(
-    (gbpPence: number): string => {
-      if (gbpPence === 0) return 'Free'
-      if (currency === 'USD') {
-        // gbpPence × rate = US cents (1 pence = 1.27 US cents).
-        const usdCents = Math.round(gbpPence * USD_PER_GBP)
-        return `$${(usdCents / 100).toFixed(2)}`
-      }
-      return `£${(gbpPence / 100).toFixed(2)}`
+    (amountMinor: number): string => {
+      // amountMinor is already in the active currency's minor units (no conversion).
+      if (amountMinor === 0) return 'Free'
+      const symbol = currency === 'USD' ? '$' : '£'
+      return `${symbol}${(amountMinor / 100).toFixed(2)}`
     },
     [currency],
   )

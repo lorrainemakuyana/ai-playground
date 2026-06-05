@@ -14,8 +14,15 @@ describe('PlanComparisonTable', () => {
 
   it('renders GBP prices by default', () => {
     render(<PlanComparisonTable />)
-    expect(screen.getByText('£11.99')).toBeInTheDocument()
-    expect(screen.getByText('£29.99')).toBeInTheDocument()
+    expect(screen.getByText('£14.99')).toBeInTheDocument()
+    expect(screen.getByText('£39.99')).toBeInTheDocument()
+  })
+
+  it('renders USD prices when toggled', () => {
+    window.localStorage.setItem('preferred_currency', 'USD')
+    render(<PlanComparisonTable />)
+    expect(screen.getByText('$19.99')).toBeInTheDocument()
+    expect(screen.getByText('$59.99')).toBeInTheDocument()
   })
 
   it('marks the current tier', () => {

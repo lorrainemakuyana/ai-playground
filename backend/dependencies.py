@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+import secrets as _secrets
 from typing import Any, Optional
 
 from fastapi import Cookie, Depends, Header, HTTPException, status
@@ -8,6 +10,7 @@ from sqlmodel import select
 
 from database import get_session
 from models.db import Project, ProjectShare, User
+from plans import get_effective_plan  # noqa: F401  (re-exported for route imports)
 from services.auth_service import decode_token
 
 
@@ -81,3 +84,29 @@ async def get_accessible_project(
         return project
 
     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+
+def admin_required(authorization: Optional[str] = Header(default=None)) -> None:
+    """Gate back-office /admin routes behind the ADMIN_SECRET bearer token.
+
+    Deliberately separate from the user JWT system: admins need not be
+    registered users. Fails closed (503) if ADMIN_SECRET is unset so a missing
+    env var can never leave the admin surface open.
+    """
+    expected = os.getenv("ADMIN_SECRET")
+    if not expected:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin API not configured",
+        )
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin authentication required",
+        )
+    presented = authorization[7:]
+    if not _secrets.compare_digest(presented, expected):  # constant-time
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid admin credentials",
+        )

@@ -1,3 +1,5 @@
+import { isPlanLimitDetail, reasonForDetail, triggerUpgradeModal } from '@/lib/upgradeModalBridge'
+
 // Server Components need an absolute URL; browser requests go through the Next.js rewrite proxy.
 const API_BASE =
   typeof window === 'undefined'
@@ -14,7 +16,11 @@ export class ApiError extends Error {
   }
 }
 
-async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
+interface FetchConfig {
+  noAuthRedirect?: boolean  // skip the 401 → /auth redirect (for opportunistic probes)
+}
+
+async function fetchJSON<T>(path: string, options?: RequestInit, config?: FetchConfig): Promise<T> {
   // Auth travels in the httponly `auth_token` cookie, which the browser sends
   // automatically on these same-origin /api requests — no Authorization header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -34,13 +40,19 @@ async function fetchJSON<T>(path: string, options?: RequestInit): Promise<T> {
     const body = await res.json().catch(() => ({ detail: res.statusText }))
     const message: string = body.detail ?? 'Request failed'
 
-    if (res.status === 401) {
+    if (res.status === 401 && !config?.noAuthRedirect) {
       // Only redirect to /auth when the request is not already from the auth page.
       // Redirecting from /auth causes a page reload that prevents the error from
       // being shown and triggers FrameDoesNotExistError in browser extensions.
       if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
         window.location.href = '/auth'
       }
+    }
+
+    // Plan-limit / sharing 403s open the UpgradeModal as a side-effect. The
+    // ApiError is still thrown so existing callers' try/catch keep working.
+    if (res.status === 403 && isPlanLimitDetail(message)) {
+      triggerUpgradeModal(reasonForDetail(message))
     }
 
     throw new ApiError(res.status, message)
@@ -216,4 +228,24 @@ export async function unarchiveProject(projectId: string): Promise<import('@/typ
 
 export async function deleteProject(projectId: string): Promise<void> {
   return fetchJSON<void>(`/projects/${projectId}`, { method: 'DELETE' })
+}
+
+// Current user / plan
+export async function getCurrentUser(): Promise<import('@/types').CurrentUser> {
+  return fetchJSON<import('@/types').CurrentUser>('/users/me')
+}
+
+/**
+ * Non-redirecting variant for public pages (e.g. /pricing): returns null when
+ * logged out or the token is stale, and never bounces to /auth.
+ */
+export async function getCurrentUserOptional(): Promise<import('@/types').CurrentUser | null> {
+  // The auth_token cookie is httponly (not JS-readable), so we can't pre-check it.
+  // Probe /users/me with the auth cookie the browser sends automatically; a 401
+  // (logged out / stale) resolves to null without redirecting.
+  try {
+    return await fetchJSON<import('@/types').CurrentUser>('/users/me', undefined, { noAuthRedirect: true })
+  } catch {
+    return null
+  }
 }

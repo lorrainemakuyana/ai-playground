@@ -14,6 +14,7 @@ import AgentOutputDrawer from '@/components/AgentOutputDrawer'
 import ShareModal from './_components/ShareModal'
 import Spinner from '@/components/Spinner'
 import StatusBadge from '@/components/StatusBadge'
+import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
 
 export default function ProjectDashboardPage() {
   const params = useParams()
@@ -35,6 +36,9 @@ export default function ProjectDashboardPage() {
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
+
+  const { effectivePlan } = useCurrentUser()
+  const sharingLocked = effectivePlan === 'free'
 
   useEffect(() => {
     async function load() {
@@ -239,7 +243,7 @@ export default function ProjectDashboardPage() {
           Preview
         </Link>
 
-        {project?.is_owner && (
+        {project?.is_owner && !sharingLocked && (
           <button
             onClick={() => setShareOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors flex-none"
@@ -249,6 +253,30 @@ export default function ProjectDashboardPage() {
             </svg>
             Share
           </button>
+        )}
+
+        {project?.is_owner && sharingLocked && (
+          <span className="group relative flex-none">
+            <button
+              type="button"
+              disabled
+              aria-disabled="true"
+              aria-describedby="share-locked-tip"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-neutral-800/60 text-neutral-500 cursor-not-allowed"
+            >
+              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              </svg>
+              Share
+            </button>
+            <span
+              role="tooltip"
+              id="share-locked-tip"
+              className="absolute top-full mt-1 right-0 z-10 whitespace-nowrap rounded-md bg-neutral-800 px-2 py-1 text-xs text-neutral-200 shadow-xl opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity animate-fadeSlideDown pointer-events-none"
+            >
+              Upgrade to Pro to share
+            </span>
+          </span>
         )}
 
         {showResume && (

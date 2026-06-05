@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import anthropic
 
 from models.db import Agent, Task, Project, AgentMessage
 from models.enums import AgentRole
+
+if TYPE_CHECKING:
+    from models.enums import PlanTier
 from sqlmodel import select
 
 logger = logging.getLogger(__name__)
@@ -50,8 +53,26 @@ _DEFAULT_SYSTEM_PROMPTS: dict[AgentRole, str] = {
 }
 
 
-def get_model_for_agent(agent: Agent) -> str:
-    return agent.model_name or "claude-sonnet-4-6"
+def get_model_for_agent(agent: Agent, plan: "PlanTier") -> str:
+    """Resolve the model for an agent run, clamped to the owner's plan.
+
+    If the agent's configured model is outside the owner's allowed families,
+    silently downgrade to the best model the plan allows and log a warning.
+    The clamp (not a hard error) keeps detached background runs productive and
+    self-corrects stale model_name values after a downgrade.
+    """
+    from plans import best_allowed_model, model_is_allowed
+
+    requested = agent.model_name or "claude-sonnet-4-6"
+    if model_is_allowed(plan, requested):
+        return requested
+    clamped = best_allowed_model(plan)
+    if clamped != requested:
+        logger.warning(
+            "Clamping agent %s model %s -> %s (not allowed on %s plan)",
+            agent.id, requested, clamped, plan.value,
+        )
+    return clamped
 
 
 def get_system_prompt(agent: Agent) -> str:
@@ -116,12 +137,21 @@ async def run_agent_task(
     project: Project,
     conversation_history: list[dict[str, Any]],
     session_factory: Any,
+    plan: "PlanTier" = None,
 ) -> None:
-    """Run an agent task with retry logic and streaming output chunks."""
+    """Run an agent task with retry logic and streaming output chunks.
+
+    ``plan`` is the project owner's effective plan, used to clamp the model.
+    Defaults to FREE (the safe floor) when not supplied.
+    """
     import services.orchestrator as orchestrator
+    from models.enums import PlanTier
+
+    if plan is None:
+        plan = PlanTier.FREE
 
     messages = build_messages_for_task(task, project, conversation_history)
-    model = get_model_for_agent(agent)
+    model = get_model_for_agent(agent, plan)
     system_prompt = get_system_prompt(agent)
 
     # max_retries=0: we own the retry loop; don't let the SDK retry internally.

@@ -4,7 +4,7 @@ from typing import Optional, List
 
 from sqlmodel import SQLModel, Field, Relationship
 
-from models.enums import SDLCPhase, AgentRole, AgentStatus, TaskStatus, ProjectStatus
+from models.enums import SDLCPhase, AgentRole, AgentStatus, TaskStatus, ProjectStatus, PlanTier
 
 
 def _utcnow() -> datetime:
@@ -22,6 +22,8 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     password_hash: str
     token_version: int = Field(default=1)
+    plan: PlanTier = Field(default=PlanTier.FREE)
+    plan_expires_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=_utcnow)
 
     projects: List["Project"] = Relationship(back_populates="owner")

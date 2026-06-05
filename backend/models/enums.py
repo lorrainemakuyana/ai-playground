@@ -39,3 +39,9 @@ class ProjectStatus(str, Enum):
     ACTIVE = "active"
     PAUSED = "paused"
     DONE   = "done"
+
+
+class PlanTier(str, Enum):
+    FREE  = "free"
+    PRO   = "pro"
+    ULTRA = "ultra"

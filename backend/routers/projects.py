@@ -8,9 +8,10 @@ from sqlmodel import delete as sql_delete, select
 from sqlalchemy import func
 
 from database import get_session, async_session_factory
-from dependencies import get_accessible_project, get_current_user, get_owned_project
+from dependencies import get_accessible_project, get_current_user, get_effective_plan, get_owned_project
 from models.db import Project, Agent, AgentMessage, AgentTemplate, ProjectShare, ProjectShareLink, Task, User
 from models.enums import AgentRole
+from plans import project_limit
 from models.schemas import (
     AgentMessageSchema,
     AgentSchema,
@@ -32,6 +33,19 @@ async def create_project(
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
 ) -> ProjectDetailSchema:
+    # Enforce the project-count limit for the user's effective plan.
+    effective = get_effective_plan(current_user)
+    limit = project_limit(effective)
+    if limit is not None:
+        count = (await session.exec(
+            select(func.count(Project.id)).where(Project.user_id == current_user.id)
+        )).one()
+        if count >= limit:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"{effective.value.capitalize()} plan limit: {limit} projects",
+            )
+
     project = Project(name=body.name, description=body.description, user_id=current_user.id)
     session.add(project)
     await session.commit()

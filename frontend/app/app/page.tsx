@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getProjects, logout } from "@/lib/api";
 import type { ProjectSummary } from "@/types";
+import HeaderPlanBadge from "@/components/HeaderPlanBadge";
 import NewProjectForm from "./_components/NewProjectForm";
 import ActiveProjectCard from "./_components/ActiveProjectCard";
 import ArchivedProjectCard from "./_components/ArchivedProjectCard";
@@ -139,6 +140,7 @@ export default function AppHomePage() {
             <span className="text-base font-bold text-neutral-100 tracking-tight">
               Orchestrator
             </span>
+            <HeaderPlanBadge />
           </div>
           <div className="flex items-center gap-2">
             <Link

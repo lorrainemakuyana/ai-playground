@@ -10,9 +10,10 @@ from sqlalchemy import func
 from sqlmodel import select
 
 from database import get_session
-from dependencies import get_accessible_project, get_current_user, get_owned_project
+from dependencies import get_accessible_project, get_current_user, get_effective_plan, get_owned_project
 from models.db import Project, ProjectShare, ProjectShareLink, User
 from models.schemas import InviteByEmailRequest, ProjectShareSchema, ShareLinkSchema
+from plans import sharing_allowed
 
 router = APIRouter()
 
@@ -113,6 +114,9 @@ async def invite_by_email(
     current_user: User = Depends(get_current_user),
 ) -> ProjectShareSchema:
     project = await get_owned_project(project_id, current_user, session)
+
+    if not sharing_allowed(get_effective_plan(current_user)):
+        raise HTTPException(status_code=403, detail="Sharing requires Pro or Ultra")
 
     if body.email.lower() == current_user.email.lower():
         raise HTTPException(status_code=422, detail="You cannot invite yourself")
@@ -241,6 +245,10 @@ async def get_or_create_share_link(
     current_user: User = Depends(get_current_user),
 ) -> ShareLinkSchema:
     await get_owned_project(project_id, current_user, session)
+
+    if not sharing_allowed(get_effective_plan(current_user)):
+        raise HTTPException(status_code=403, detail="Sharing requires Pro or Ultra")
+
     result = await session.exec(
         select(ProjectShareLink).where(ProjectShareLink.project_id == project_id)
     )

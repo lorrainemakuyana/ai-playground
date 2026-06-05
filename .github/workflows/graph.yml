@@ -23,7 +23,7 @@ jobs:
         run: pip install graphifyy -q
 
       - name: Update graph
-        run: graphify extract . --backend claude-cli
+        run: graphify extract . --backend claude
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 

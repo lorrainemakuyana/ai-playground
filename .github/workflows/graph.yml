@@ -20,7 +20,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install graphify
-        run: pip install graphifyy -q
+        run: pip install "graphifyy[anthropic]" -q
 
       - name: Update graph
         run: graphify extract . --backend claude

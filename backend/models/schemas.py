@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from typing import Optional, List
 
@@ -13,6 +14,25 @@ from models.enums import (
     ProjectStatus,
     PlanTier,
 )
+
+# Anthropic model identifiers, e.g. "claude-sonnet-4-6". Validated by shape
+# rather than an exact allow-list so new model versions don't require a code
+# change, while still rejecting arbitrary free-text sent to the API.
+_MODEL_NAME_RE = re.compile(r"^claude-[a-z0-9.\-]{1,80}$")
+_MAX_SYSTEM_PROMPT = 20_000
+
+
+def _validate_model_name(v: str) -> str:
+    v = v.strip()
+    if not _MODEL_NAME_RE.match(v):
+        raise ValueError("model_name must be a valid Claude model identifier (e.g. claude-sonnet-4-6)")
+    return v
+
+
+def _validate_system_prompt(v: Optional[str]) -> Optional[str]:
+    if v is not None and len(v) > _MAX_SYSTEM_PROMPT:
+        raise ValueError(f"system_prompt must be at most {_MAX_SYSTEM_PROMPT} characters")
+    return v
 
 
 # ---------------------------------------------------------------------------
@@ -208,6 +228,8 @@ class CreateProjectRequest(BaseModel):
         v = v.strip()
         if len(v) < 10:
             raise ValueError("description must have at least 10 characters")
+        if len(v) > 5000:
+            raise ValueError("description must be at most 5000 characters")
         return v
 
 
@@ -227,6 +249,16 @@ class CreateAgentRequest(BaseModel):
             raise ValueError("specialization must be at most 200 characters")
         return v
 
+    @field_validator("model_name")
+    @classmethod
+    def validate_model_name(cls, v: str) -> str:
+        return _validate_model_name(v)
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_system_prompt(v)
+
 
 class UpdateAgentRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -234,6 +266,16 @@ class UpdateAgentRequest(BaseModel):
     specialization: Optional[str] = None
     model_name: Optional[str] = None
     system_prompt: Optional[str] = None
+
+    @field_validator("model_name")
+    @classmethod
+    def validate_model_name(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_model_name(v) if v is not None else v
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_system_prompt(v)
 
 
 class CreateAgentTemplateRequest(BaseModel):
@@ -250,6 +292,16 @@ class CreateAgentTemplateRequest(BaseModel):
             raise ValueError("specialization required")
         return v
 
+    @field_validator("model_name")
+    @classmethod
+    def validate_model_name(cls, v: str) -> str:
+        return _validate_model_name(v)
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_system_prompt(v)
+
 
 class UpdateAgentTemplateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -258,6 +310,16 @@ class UpdateAgentTemplateRequest(BaseModel):
     model_name: Optional[str] = None
     system_prompt: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @field_validator("model_name")
+    @classmethod
+    def validate_model_name(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_model_name(v) if v is not None else v
+
+    @field_validator("system_prompt")
+    @classmethod
+    def validate_system_prompt(cls, v: Optional[str]) -> Optional[str]:
+        return _validate_system_prompt(v)
 
 
 class DirectiveRequest(BaseModel):

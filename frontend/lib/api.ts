@@ -16,25 +16,20 @@ export class ApiError extends Error {
   }
 }
 
-function getStoredToken(): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(/(?:^|; )auth_token=([^;]*)/)
-  return match ? decodeURIComponent(match[1]) : null
-}
-
 interface FetchConfig {
   noAuthRedirect?: boolean  // skip the 401 → /auth redirect (for opportunistic probes)
 }
 
 async function fetchJSON<T>(path: string, options?: RequestInit, config?: FetchConfig): Promise<T> {
-  const token = getStoredToken()
+  // Auth travels in the httponly `auth_token` cookie, which the browser sends
+  // automatically on these same-origin /api requests — no Authorization header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
+      credentials: 'same-origin',
       headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
     })
   } catch {
@@ -245,7 +240,9 @@ export async function getCurrentUser(): Promise<import('@/types').CurrentUser> {
  * logged out or the token is stale, and never bounces to /auth.
  */
 export async function getCurrentUserOptional(): Promise<import('@/types').CurrentUser | null> {
-  if (!getStoredToken()) return null
+  // The auth_token cookie is httponly (not JS-readable), so we can't pre-check it.
+  // Probe /users/me with the auth cookie the browser sends automatically; a 401
+  // (logged out / stale) resolves to null without redirecting.
   try {
     return await fetchJSON<import('@/types').CurrentUser>('/users/me', undefined, { noAuthRedirect: true })
   } catch {

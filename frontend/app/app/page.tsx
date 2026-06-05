@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getProjects, logout } from "@/lib/api";
-import { clearToken } from "@/lib/auth";
 import type { ProjectSummary } from "@/types";
 import HeaderPlanBadge from "@/components/HeaderPlanBadge";
 import NewProjectForm from "./_components/NewProjectForm";
@@ -77,9 +76,8 @@ export default function AppHomePage() {
     try {
       await logout();
     } catch {
-      /* clear token regardless */
+      /* navigate to auth regardless; the backend clears the cookie on logout */
     }
-    clearToken();
     router.push("/auth");
   }
 

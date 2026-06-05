@@ -15,6 +15,18 @@ async def test_register_success(raw_client):
     assert "auth_token" in resp.cookies
 
 
+async def test_register_seeds_default_agent_team(raw_client):
+    reg = await raw_client.post("/auth/register", json=VALID_CREDS)
+    token = reg.json()["access_token"]
+    resp = await raw_client.get("/agent-templates", headers={"Authorization": f"Bearer {token}"})
+    assert resp.status_code == 200
+    templates = resp.json()
+    # The new user gets their own customizable default team (tech-lead + 2 eng + qa + sre)
+    assert len(templates) == 5
+    roles = {t["role"] for t in templates}
+    assert "tech-lead" in roles
+
+
 async def test_register_duplicate_email(raw_client):
     await raw_client.post("/auth/register", json=VALID_CREDS)
     resp = await raw_client.post("/auth/register", json=VALID_CREDS)

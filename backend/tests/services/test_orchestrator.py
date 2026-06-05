@@ -3,33 +3,55 @@ import pytest
 from models.db import Agent
 from models.enums import AgentRole, SDLCPhase, PlanTier
 from services.agent_runner import get_model_for_agent
-from services.orchestrator import get_or_create_queue, get_phase_task_templates, _project_queues
+from services.orchestrator import (
+    get_phase_task_templates,
+    publish_event,
+    subscribe,
+    unsubscribe,
+    _project_subscribers,
+)
 
 
 # ---------------------------------------------------------------------------
-# get_or_create_queue
+# subscribe / unsubscribe / publish_event (event fan-out)
 # ---------------------------------------------------------------------------
 
-def test_get_or_create_queue_creates_new():
-    project_id = "test-queue-project-unique-1"
-    # Clean up any leftover state
-    _project_queues.pop(project_id, None)
+def test_subscribe_registers_queue():
+    project_id = "test-sub-project-unique-1"
+    _project_subscribers.pop(project_id, None)
 
-    q = get_or_create_queue(project_id)
+    q = subscribe(project_id)
     assert isinstance(q, asyncio.Queue)
+    assert q in _project_subscribers[project_id]
 
-    _project_queues.pop(project_id, None)  # cleanup
+    unsubscribe(project_id, q)
+    assert project_id not in _project_subscribers  # entry dropped when empty
 
 
-def test_get_or_create_queue_returns_same_instance():
-    project_id = "test-queue-project-unique-2"
-    _project_queues.pop(project_id, None)
+async def test_publish_event_fans_out_to_all_subscribers():
+    project_id = "test-sub-project-unique-2"
+    _project_subscribers.pop(project_id, None)
 
-    q1 = get_or_create_queue(project_id)
-    q2 = get_or_create_queue(project_id)
-    assert q1 is q2
+    q1 = subscribe(project_id)
+    q2 = subscribe(project_id)
+    event = {"type": "heartbeat", "payload": {}}
 
-    _project_queues.pop(project_id, None)  # cleanup
+    await publish_event(project_id, event)
+
+    assert q1.get_nowait() == event
+    assert q2.get_nowait() == event
+
+    unsubscribe(project_id, q1)
+    unsubscribe(project_id, q2)
+
+
+async def test_publish_event_with_no_subscribers_is_dropped():
+    project_id = "test-sub-project-unique-3"
+    _project_subscribers.pop(project_id, None)
+
+    # Should not raise or leak any state when nobody is listening.
+    await publish_event(project_id, {"type": "heartbeat", "payload": {}})
+    assert project_id not in _project_subscribers
 
 
 # ---------------------------------------------------------------------------

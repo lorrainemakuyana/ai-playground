@@ -1,6 +1,8 @@
 import asyncio
 import pytest
-from models.enums import AgentRole, SDLCPhase
+from models.db import Agent
+from models.enums import AgentRole, SDLCPhase, PlanTier
+from services.agent_runner import get_model_for_agent
 from services.orchestrator import get_or_create_queue, get_phase_task_templates, _project_queues
 
 
@@ -81,3 +83,30 @@ def test_all_non_done_phases_return_tasks():
     for phase in non_done_phases:
         templates = get_phase_task_templates(phase)
         assert len(templates) > 0, f"Expected tasks for phase {phase}, got none"
+
+
+# ---------------------------------------------------------------------------
+# get_model_for_agent — run-time clamp to the owner's plan
+# ---------------------------------------------------------------------------
+
+def _agent(model_name: str) -> Agent:
+    return Agent(id="a1", project_id="p1", role=AgentRole.ENGINEER_1,
+                 specialization="x", model_name=model_name)
+
+
+def test_free_clamps_sonnet_and_opus_to_haiku():
+    assert get_model_for_agent(_agent("claude-sonnet-4-6"), PlanTier.FREE) == "claude-haiku-4-5-20251001"
+    assert get_model_for_agent(_agent("claude-opus-4-8"), PlanTier.FREE) == "claude-haiku-4-5-20251001"
+
+
+def test_pro_clamps_opus_to_sonnet_keeps_sonnet():
+    assert get_model_for_agent(_agent("claude-opus-4-8"), PlanTier.PRO) == "claude-sonnet-4-6"
+    assert get_model_for_agent(_agent("claude-sonnet-4-6"), PlanTier.PRO) == "claude-sonnet-4-6"
+
+
+def test_ultra_keeps_opus():
+    assert get_model_for_agent(_agent("claude-opus-4-7"), PlanTier.ULTRA) == "claude-opus-4-7"
+
+
+def test_free_keeps_haiku():
+    assert get_model_for_agent(_agent("claude-haiku-4-5-20251001"), PlanTier.FREE) == "claude-haiku-4-5-20251001"

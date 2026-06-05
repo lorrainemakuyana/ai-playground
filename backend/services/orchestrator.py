@@ -10,7 +10,7 @@ from typing import Any, AsyncIterator
 from sqlalchemy import func
 from sqlmodel import select
 
-from models.db import Project, Agent, Task, AgentMessage
+from models.db import Project, Agent, Task, AgentMessage, User
 from models.enums import AgentRole, AgentStatus, SDLCPhase, TaskStatus, ProjectStatus
 from models.schemas import AgentMessageSchema, TaskSchema
 
@@ -314,6 +314,20 @@ async def dispatch_task(task: Task, session: Any) -> None:
         logger.error("dispatch_task: project %s not found", task.project_id)
         return
 
+    # Resolve the project OWNER's effective plan to clamp the agent's model.
+    # The running user is irrelevant — a Free collaborator may run a Pro owner's
+    # agents, and a downgraded owner's agents must clamp. Legacy projects with no
+    # owner fall back to the Free/Haiku floor.
+    from plans import get_effective_plan
+    from models.enums import PlanTier
+
+    owner_plan = PlanTier.FREE
+    if project.user_id is not None:
+        owner_result = await session.exec(select(User).where(User.id == project.user_id))
+        owner = owner_result.first()
+        if owner is not None:
+            owner_plan = get_effective_plan(owner)
+
     # Update task and agent status
     task.status = TaskStatus.IN_PROGRESS
     task.assigned_agent_id = agent.id
@@ -381,6 +395,7 @@ async def dispatch_task(task: Task, session: Any) -> None:
             project_snapshot,
             history,
             async_session_factory,
+            plan=owner_plan,
         )
     )
     _running_tasks[task.id] = bg

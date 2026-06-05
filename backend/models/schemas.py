@@ -11,6 +11,7 @@ from models.enums import (
     AgentStatus,
     TaskStatus,
     ProjectStatus,
+    PlanTier,
 )
 
 
@@ -40,6 +41,35 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     user_id: str
     email: str
+
+
+# ---------------------------------------------------------------------------
+# Subscription plan schemas
+# ---------------------------------------------------------------------------
+
+class UserMeSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    plan: PlanTier                       # stored plan
+    plan_expires_at: Optional[datetime] = None
+    effective_plan: PlanTier             # computed (after expiry applied)
+
+
+class AdminUserSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    plan: PlanTier
+    plan_expires_at: Optional[datetime] = None
+    effective_plan: PlanTier
+
+
+class SetPlanRequest(BaseModel):
+    plan: PlanTier                       # invalid value -> FastAPI 422 automatically
+    plan_expires_at: Optional[datetime] = None
 
 
 # ---------------------------------------------------------------------------

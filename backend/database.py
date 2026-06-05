@@ -29,6 +29,9 @@ _MIGRATIONS = [
     # Auth migrations
     "ALTER TABLE projects ADD COLUMN user_id TEXT REFERENCES users(id)",
     "ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 1",
+    # Subscription plan migrations
+    "ALTER TABLE users ADD COLUMN plan TEXT NOT NULL DEFAULT 'free'",
+    "ALTER TABLE users ADD COLUMN plan_expires_at TEXT",
     # Sharing + archiving migrations
     "ALTER TABLE projects ADD COLUMN archived_at TEXT",
     """CREATE TABLE IF NOT EXISTS project_shares (

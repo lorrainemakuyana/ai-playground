@@ -1,11 +1,21 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { login, register } from '@/lib/api'
 import { setToken } from '@/lib/auth'
 
 export default function AuthPage() {
+  // useSearchParams (inside AuthPageContent) must sit under a Suspense boundary
+  // for static prerendering — see nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
+      <AuthPageContent />
+    </Suspense>
+  )
+}
+
+function AuthPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'register'>('login')

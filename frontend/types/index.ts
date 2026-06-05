@@ -18,6 +18,17 @@ export type AgentStatus = 'idle' | 'working' | 'blocked' | 'done'
 export type TaskStatus  = 'pending' | 'in-progress' | 'review' | 'done' | 'failed' | 'cancelled'
 export type ProjectStatus = 'active' | 'paused' | 'done'
 
+export type PlanTier = 'free' | 'pro' | 'ultra'
+export type Currency = 'GBP' | 'USD'
+
+export interface CurrentUser {
+  id: string
+  email: string
+  plan: PlanTier                 // stored plan (may be expired)
+  plan_expires_at: string | null // ISO datetime
+  effective_plan: PlanTier       // server-computed; 'free' if expired
+}
+
 export interface Agent {
   id: string
   project_id: string

@@ -5,12 +5,33 @@ from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import event, text
+from sqlalchemy.engine import make_url
 
 from models.enums import AgentRole
 
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/orchestrator.db")
+
+
+def _ensure_sqlite_dir(url: str) -> None:
+    """Create the parent directory for a file-based SQLite DB if it's missing.
+
+    On a fresh host (e.g. Render's working dir) the `./data` folder doesn't
+    exist, so SQLite raises "unable to open database file" on first connect.
+    """
+    parsed = make_url(url)
+    if parsed.get_backend_name() != "sqlite":
+        return
+    db_path = parsed.database
+    if not db_path or db_path == ":memory:":
+        return
+    parent = os.path.dirname(os.path.abspath(db_path))
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+
+
+_ensure_sqlite_dir(DATABASE_URL)
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 

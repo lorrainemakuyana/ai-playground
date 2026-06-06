@@ -5,13 +5,14 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { toast } from 'sonner'
 import { getProject, dispatchNextTask, sendDirective, cancelTask } from '@/lib/api'
-import type { Project, Agent, Task, AgentMessage, SDLCPhase, AgentStatus } from '@/types'
+import type { Project, Agent, Task, AgentMessage, SDLCPhase, AgentStatus, GitHubPushStatus } from '@/types'
 import { useProjectStream } from '@/hooks/useProjectStream'
 import PhaseTracker from '@/components/PhaseTracker'
 import AgentCard from '@/components/AgentCard'
 import TaskFeed from '@/components/TaskFeed'
 import AgentOutputDrawer from '@/components/AgentOutputDrawer'
 import ShareModal from './_components/ShareModal'
+import GitHubPanel from './_components/GitHubPanel'
 import Spinner from '@/components/Spinner'
 import StatusBadge from '@/components/StatusBadge'
 import { useCurrentUser } from '@/lib/hooks/useCurrentUser'
@@ -37,6 +38,9 @@ export default function ProjectDashboardPage() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [shareOpen, setShareOpen] = useState(false)
 
+  const [githubPushStatus, setGithubPushStatus] = useState<GitHubPushStatus | null>(null)
+  const [githubPrUrl, setGithubPrUrl] = useState<string | null>(null)
+
   const { effectivePlan } = useCurrentUser()
   const sharingLocked = effectivePlan === 'free'
 
@@ -49,6 +53,8 @@ export default function ProjectDashboardPage() {
         setTasks(data.tasks)
         setMessages(data.messages)
         setCurrentPhase(data.current_phase)
+        setGithubPushStatus(data.github_push_status)
+        setGithubPrUrl(data.github_pr_url)
       } catch (err) {
         setFetchError(err instanceof Error ? err.message : 'Failed to load project')
       } finally {
@@ -98,6 +104,19 @@ export default function ProjectDashboardPage() {
     toast.error(message, { duration: Infinity })
   }, [])
 
+  const handleGitHubPush = useCallback((status: GitHubPushStatus) => {
+    setGithubPushStatus(status)
+    if (status === 'success') toast.success('Code pushed to GitHub')
+    else if (status === 'failed') toast.error('GitHub push failed')
+  }, [])
+
+  const handleGitHubPR = useCallback((status: GitHubPushStatus, prUrl: string) => {
+    if (status === 'success' && prUrl) {
+      setGithubPrUrl(prUrl)
+      toast.success('Pull request opened on GitHub')
+    }
+  }, [])
+
   const { connectionStatus, reconnect, stop } = useProjectStream({
     projectId,
     onTaskUpdate: handleTaskUpdate,
@@ -106,6 +125,8 @@ export default function ProjectDashboardPage() {
     onPhaseChange: handlePhaseChange,
     onTaskOutputChunk: handleTaskOutputChunk,
     onError: handleError,
+    onGitHubPush: handleGitHubPush,
+    onGitHubPR: handleGitHubPR,
   })
 
   useEffect(() => { stopRef.current = stop }, [stop])
@@ -319,6 +340,21 @@ export default function ProjectDashboardPage() {
       </div>
 
       <PhaseTracker currentPhase={currentPhase} />
+
+      {project?.is_owner && (
+        <GitHubPanel
+          projectId={projectId}
+          initialRepo={project.github_repo}
+          initialBranch={project.github_branch}
+          initialPushStatus={githubPushStatus}
+          initialPushError={project.github_push_error}
+          initialPrUrl={githubPrUrl}
+          onStatusChange={(status, prUrl) => {
+            setGithubPushStatus(status)
+            if (prUrl) setGithubPrUrl(prUrl)
+          }}
+        />
+      )}
 
       {connectionStatus === 'failed' && (
         <div className="flex items-center justify-between gap-4 px-4 py-2.5 bg-red-950 border-b border-red-900 text-sm text-red-300">

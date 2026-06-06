@@ -2,9 +2,21 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional, List
 
+from sqlalchemy import Enum as SAEnum
 from sqlmodel import SQLModel, Field, Relationship
 
 from models.enums import SDLCPhase, AgentRole, AgentStatus, TaskStatus, ProjectStatus, PlanTier
+
+
+# Persist PlanTier by its string *value* ("free"/"pro"/"ultra") rather than the
+# member name ("FREE"/...). The rows already stored lowercase values, and the
+# API serializes the same way; without this, reads raise
+# `LookupError: 'free' is not among the defined enum values`.
+_plan_tier_type = SAEnum(
+    PlanTier,
+    name="plantier",
+    values_callable=lambda enum: [member.value for member in enum],
+)
 
 
 def _utcnow() -> datetime:
@@ -22,7 +34,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True)
     password_hash: str
     token_version: int = Field(default=1)
-    plan: PlanTier = Field(default=PlanTier.FREE)
+    plan: PlanTier = Field(default=PlanTier.FREE, sa_type=_plan_tier_type)
     plan_expires_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=_utcnow)
 

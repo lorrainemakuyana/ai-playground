@@ -19,7 +19,8 @@ jobs:
           else
             DEPLOY_HOOK="${{ secrets.RENDER_DEPLOY_HOOK_STAGING }}"
           fi
-          curl -s -X POST "$DEPLOY_HOOK" | jq .
+          RESPONSE=$(curl -s -X POST "$DEPLOY_HOOK")
+          echo "$RESPONSE" | jq . 2>/dev/null || echo "Deploy triggered: $RESPONSE"
 
       - name: Wait for deploy to complete
         run: |

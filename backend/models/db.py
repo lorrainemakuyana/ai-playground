@@ -8,15 +8,25 @@ from sqlmodel import SQLModel, Field, Relationship
 from models.enums import SDLCPhase, AgentRole, AgentStatus, TaskStatus, ProjectStatus, PlanTier
 
 
-# Persist PlanTier by its string *value* ("free"/"pro"/"ultra") rather than the
-# member name ("FREE"/...). The rows already stored lowercase values, and the
-# API serializes the same way; without this, reads raise
-# `LookupError: 'free' is not among the defined enum values`.
-_plan_tier_type = SAEnum(
-    PlanTier,
-    name="plantier",
-    values_callable=lambda enum: [member.value for member in enum],
-)
+# Persist every enum column by its string *value* (e.g. "free", "tech-lead",
+# "in-progress") rather than the member name ("FREE", "TECH_LEAD", ...). This
+# matches how the API serializes enums and keeps all columns consistent;
+# without it, SQLAlchemy stores/reads by name and value-form rows raise
+# `LookupError: '<value>' is not among the defined enum values`.
+def _value_enum(enum_cls: type) -> SAEnum:
+    return SAEnum(
+        enum_cls,
+        name=enum_cls.__name__.lower(),
+        values_callable=lambda enum: [member.value for member in enum],
+    )
+
+
+_plan_tier_type = _value_enum(PlanTier)
+_agent_role_type = _value_enum(AgentRole)
+_agent_status_type = _value_enum(AgentStatus)
+_task_status_type = _value_enum(TaskStatus)
+_project_status_type = _value_enum(ProjectStatus)
+_sdlc_phase_type = _value_enum(SDLCPhase)
 
 
 def _utcnow() -> datetime:
@@ -48,7 +58,7 @@ class AgentTemplate(SQLModel, table=True):
 
     id: str = Field(default_factory=_new_uuid, primary_key=True)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
-    role: AgentRole
+    role: AgentRole = Field(sa_type=_agent_role_type)
     specialization: str
     model_name: str = Field(default="claude-sonnet-4-6")
     system_prompt: Optional[str] = Field(default=None)
@@ -62,8 +72,8 @@ class Project(SQLModel, table=True):
     id: str = Field(default_factory=_new_uuid, primary_key=True)
     name: str
     description: str
-    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE)
-    current_phase: SDLCPhase = Field(default=SDLCPhase.DISCOVERY)
+    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, sa_type=_project_status_type)
+    current_phase: SDLCPhase = Field(default=SDLCPhase.DISCOVERY, sa_type=_sdlc_phase_type)
     created_at: datetime = Field(default_factory=_utcnow)
     archived_at: Optional[datetime] = Field(default=None)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
@@ -80,11 +90,11 @@ class Agent(SQLModel, table=True):
 
     id: str = Field(default_factory=_new_uuid, primary_key=True)
     project_id: str = Field(foreign_key="projects.id")
-    role: AgentRole
+    role: AgentRole = Field(sa_type=_agent_role_type)
     specialization: str
     model_name: str = Field(default="claude-sonnet-4-6")
     system_prompt: Optional[str] = Field(default=None)
-    status: AgentStatus = Field(default=AgentStatus.IDLE)
+    status: AgentStatus = Field(default=AgentStatus.IDLE, sa_type=_agent_status_type)
     is_template_agent: bool = Field(default=False)  # copied from a global template
     is_archived: bool = Field(default=False)         # soft-deleted
 
@@ -104,12 +114,12 @@ class Task(SQLModel, table=True):
     id: str = Field(default_factory=_new_uuid, primary_key=True)
     project_id: str = Field(foreign_key="projects.id")
     assigned_agent_id: Optional[str] = Field(default=None, foreign_key="agents.id")
-    phase: SDLCPhase
+    phase: SDLCPhase = Field(sa_type=_sdlc_phase_type)
     title: str
     description: str
-    status: TaskStatus = Field(default=TaskStatus.PENDING)
+    status: TaskStatus = Field(default=TaskStatus.PENDING, sa_type=_task_status_type)
     output: Optional[str] = Field(default=None)
-    role: Optional[AgentRole] = Field(default=None)
+    role: Optional[AgentRole] = Field(default=None, sa_type=_agent_role_type)
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
 

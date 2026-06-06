@@ -286,6 +286,12 @@ async def advance_phase(project_id: str, session: Any) -> SDLCPhase | None:
         },
     )
 
+    # GitHub integration hooks — fire-and-forget; never block phase progression
+    if next_phase == SDLCPhase.TESTING and current_phase == SDLCPhase.IMPLEMENTATION:
+        asyncio.create_task(_github_auto_push(project, session))
+    elif next_phase == SDLCPhase.DONE:
+        asyncio.create_task(_github_auto_pr(project, session))
+
     await _dispatch_phase_start_tasks(tasks_created, session)
 
     return next_phase
@@ -694,6 +700,83 @@ async def handle_agent_failure(
             "payload": {"message": f"Task '{task.title}' failed: {error}"},
         },
     )
+
+
+async def _github_auto_push(project: Any, session: Any) -> None:
+    """Background task: push implementation content to GitHub after IMPLEMENTATION phase."""
+    import os
+    import services.github_service as gh
+    from database import async_session_factory
+    from sqlmodel import select
+
+    try:
+        async with async_session_factory() as new_session:
+            result = await new_session.exec(
+                select(Project).where(Project.id == project.id)
+            )
+            fresh_project = result.first()
+            if not fresh_project:
+                return
+
+            push_status = await gh.auto_push(fresh_project, new_session)
+
+            fresh_project.github_push_status = push_status
+            if push_status == "failed":
+                fresh_project.github_push_error = "Auto-push failed"
+            else:
+                fresh_project.github_push_error = None
+            new_session.add(fresh_project)
+            await new_session.commit()
+
+            await publish_event(
+                project.id,
+                {
+                    "type": "github_push",
+                    "payload": {"project_id": project.id, "status": push_status},
+                },
+            )
+    except Exception:
+        logger.exception("_github_auto_push failed for project %s", project.id)
+
+
+async def _github_auto_pr(project: Any, session: Any) -> None:
+    """Background task: open a GitHub PR when the project reaches DONE."""
+    import os
+    import services.github_service as gh
+    from database import async_session_factory
+    from sqlmodel import select
+
+    try:
+        async with async_session_factory() as new_session:
+            result = await new_session.exec(
+                select(Project).where(Project.id == project.id)
+            )
+            fresh_project = result.first()
+            if not fresh_project:
+                return
+
+            frontend_url = os.getenv("FRONTEND_URL", "")
+            pr_status, pr_url = await gh.auto_pr(fresh_project, new_session, frontend_url=frontend_url)
+
+            if pr_status == "success" and pr_url:
+                fresh_project.github_pr_url = pr_url
+            fresh_project.github_push_status = pr_status
+            new_session.add(fresh_project)
+            await new_session.commit()
+
+            await publish_event(
+                project.id,
+                {
+                    "type": "github_pr",
+                    "payload": {
+                        "project_id": project.id,
+                        "status": pr_status,
+                        "pr_url": pr_url,
+                    },
+                },
+            )
+    except Exception:
+        logger.exception("_github_auto_pr failed for project %s", project.id)
 
 
 async def stream_events(project_id: str) -> AsyncIterator[str]:

@@ -1,3 +1,9 @@
+import os
+
+# Set required env vars before any app module is imported.
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-pytest-do-not-use-in-production")
+os.environ.setdefault("GITHUB_TOKEN_KEY", "QbjlOdFfuToLEITWLzWU0pY3n5jS1PxWV1GOJAEaR2g=")
+
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional

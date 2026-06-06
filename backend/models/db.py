@@ -46,6 +46,7 @@ class User(SQLModel, table=True):
     token_version: int = Field(default=1)
     plan: PlanTier = Field(default=PlanTier.FREE, sa_type=_plan_tier_type)
     plan_expires_at: Optional[datetime] = Field(default=None)
+    github_token_enc: Optional[str] = Field(default=None)
     created_at: datetime = Field(default_factory=_utcnow)
 
     projects: List["Project"] = Relationship(back_populates="owner")
@@ -77,6 +78,11 @@ class Project(SQLModel, table=True):
     created_at: datetime = Field(default_factory=_utcnow)
     archived_at: Optional[datetime] = Field(default=None)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
+    github_repo: Optional[str] = Field(default=None)
+    github_branch: Optional[str] = Field(default=None)
+    github_push_status: Optional[str] = Field(default=None)
+    github_push_error: Optional[str] = Field(default=None)
+    github_pr_url: Optional[str] = Field(default=None)
 
     owner: Optional["User"] = Relationship(back_populates="projects")
     agents: List["Agent"] = Relationship(back_populates="project")

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import type { SSEEvent, Task, AgentMessage, SDLCPhase, AgentStatus } from '@/types'
+import type { SSEEvent, Task, AgentMessage, SDLCPhase, AgentStatus, GitHubPushStatus } from '@/types'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'failed'
 
@@ -13,6 +13,8 @@ interface UseProjectStreamOptions {
   onPhaseChange: (newPhase: SDLCPhase) => void
   onTaskOutputChunk?: (taskId: string, chunk: string, reset: boolean) => void
   onError?: (message: string) => void
+  onGitHubPush?: (status: GitHubPushStatus) => void
+  onGitHubPR?: (status: GitHubPushStatus, prUrl: string) => void
 }
 
 export function useProjectStream({
@@ -23,6 +25,8 @@ export function useProjectStream({
   onPhaseChange,
   onTaskOutputChunk,
   onError,
+  onGitHubPush,
+  onGitHubPR,
 }: UseProjectStreamOptions) {
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('connecting')
   const esRef = useRef<EventSource | null>(null)
@@ -67,6 +71,12 @@ export function useProjectStream({
           case 'error':
             onError?.(sseEvent.payload.message)
             break
+          case 'github_push':
+            onGitHubPush?.(sseEvent.payload.status)
+            break
+          case 'github_pr':
+            onGitHubPR?.(sseEvent.payload.status, sseEvent.payload.pr_url)
+            break
           case 'heartbeat':
             break
         }
@@ -87,7 +97,7 @@ export function useProjectStream({
       setConnectionStatus('reconnecting')
       reconnectRef.current = setTimeout(connect, delay)
     }
-  }, [projectId, onTaskUpdate, onAgentMessage, onAgentStatus, onPhaseChange, onTaskOutputChunk, onError])
+  }, [projectId, onTaskUpdate, onAgentMessage, onAgentStatus, onPhaseChange, onTaskOutputChunk, onError, onGitHubPush, onGitHubPR])
 
   const stop = useCallback(() => {
     esRef.current?.close()

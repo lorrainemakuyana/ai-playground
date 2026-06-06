@@ -162,6 +162,11 @@ class ProjectDetailSchema(BaseModel):
     agents: List[AgentSchema] = []
     tasks: List[TaskSchema] = []
     messages: List[AgentMessageSchema] = []
+    github_repo: Optional[str] = None
+    github_branch: Optional[str] = None
+    github_push_status: Optional[str] = None
+    github_push_error: Optional[str] = None
+    github_pr_url: Optional[str] = None
 
 
 class ProjectSummarySchema(BaseModel):

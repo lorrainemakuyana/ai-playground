@@ -70,6 +70,13 @@ _MIGRATIONS = [
     "ALTER TABLE users ADD COLUMN plan_expires_at TEXT",
     # Sharing + archiving migrations
     "ALTER TABLE projects ADD COLUMN archived_at TEXT",
+    # GitHub integration migrations
+    "ALTER TABLE users ADD COLUMN github_token_enc TEXT",
+    "ALTER TABLE projects ADD COLUMN github_repo TEXT",
+    "ALTER TABLE projects ADD COLUMN github_branch TEXT",
+    "ALTER TABLE projects ADD COLUMN github_push_status TEXT",
+    "ALTER TABLE projects ADD COLUMN github_push_error TEXT",
+    "ALTER TABLE projects ADD COLUMN github_pr_url TEXT",
     """CREATE TABLE IF NOT EXISTS project_shares (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL REFERENCES projects(id),

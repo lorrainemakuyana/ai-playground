@@ -1,0 +1,13 @@
+# Netlify build config for the Next.js frontend (monorepo: app lives in frontend/).
+# Netlify reads this from the repo root, switches into `base`, runs the build there,
+# and the Next.js runtime plugin handles SSR, dynamic routes, and the /api/* rewrite.
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "frontend/.next"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

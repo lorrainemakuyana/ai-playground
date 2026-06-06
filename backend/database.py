@@ -7,7 +7,14 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 from sqlalchemy import event, text
 from sqlalchemy.engine import make_url
 
-from models.enums import AgentRole
+from models.enums import (
+    AgentRole,
+    AgentStatus,
+    PlanTier,
+    ProjectStatus,
+    SDLCPhase,
+    TaskStatus,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +100,42 @@ DEFAULT_AGENT_TEAM = [
 ]
 
 
+# Enum columns are persisted by member *value* (e.g. "tech-lead", "in-progress").
+# Older rows were stored by member *name* ("TECH_LEAD", ...); this backfill
+# rewrites them so reads don't raise LookupError. Idempotent: name != value for
+# every member, so once converted the WHERE clause matches nothing.
+_ENUM_COLUMNS = [
+    ("users", "plan", PlanTier),
+    ("agent_templates", "role", AgentRole),
+    ("projects", "status", ProjectStatus),
+    ("projects", "current_phase", SDLCPhase),
+    ("agents", "role", AgentRole),
+    ("agents", "status", AgentStatus),
+    ("tasks", "phase", SDLCPhase),
+    ("tasks", "status", TaskStatus),
+    ("tasks", "role", AgentRole),
+]
+
+
+async def _migrate_enum_values(conn):
+    for table, column, enum_cls in _ENUM_COLUMNS:
+        for member in enum_cls:
+            if member.name == member.value:
+                continue
+            try:
+                await conn.execute(
+                    text(f"UPDATE {table} SET {column} = :value WHERE {column} = :name"),
+                    {"value": member.value, "name": member.name},
+                )
+            except Exception as exc:
+                # A missing table on a fresh DB is fine — create_all already ran,
+                # so this only happens if a table legitimately doesn't exist yet.
+                if "no such table" not in str(exc).lower():
+                    logger.warning(
+                        "Enum backfill failed (%s.%s): %s", table, column, exc
+                    )
+
+
 async def _migrate(conn):
     for stmt in _MIGRATIONS:
         try:
@@ -101,6 +144,7 @@ async def _migrate(conn):
             # ADD COLUMN on an existing column is expected; anything else is logged.
             if "duplicate column" not in str(exc).lower():
                 logger.warning("Migration step failed (%s): %s", stmt, exc)
+    await _migrate_enum_values(conn)
 
 
 async def seed_default_templates_for_user(user_id: str, session) -> None:

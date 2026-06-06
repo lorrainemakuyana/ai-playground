@@ -341,7 +341,7 @@ export default function ProjectDashboardPage() {
 
       <PhaseTracker currentPhase={currentPhase} />
 
-      {project?.is_owner && (
+      {project?.is_owner && effectivePlan !== 'free' && (
         <GitHubPanel
           projectId={projectId}
           initialRepo={project.github_repo}

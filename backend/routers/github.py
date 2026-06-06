@@ -9,12 +9,24 @@ from pydantic import BaseModel
 from sqlmodel import select
 
 from database import get_session
-from dependencies import get_current_user, get_owned_project
+from dependencies import get_current_user, get_effective_plan, get_owned_project
 from models.db import Project, User
+from models.enums import PlanTier
 
 router = APIRouter()
 
 _REPO_RE = re.compile(r"^[a-zA-Z0-9._-]+/[a-zA-Z0-9._-]+$")
+
+
+def _require_pro_or_ultra(current_user: User = Depends(get_current_user)) -> User:
+    """Dependency that blocks Free-tier users from GitHub integration."""
+    plan = get_effective_plan(current_user)
+    if plan == PlanTier.FREE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Free plan limit: GitHub integration requires Pro or Ultra",
+        )
+    return current_user
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +72,7 @@ class PRResponse(BaseModel):
 @router.post("/github/token", status_code=status.HTTP_204_NO_CONTENT)
 async def save_github_token(
     body: SaveTokenRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
     session: Any = Depends(get_session),
 ):
     """Validate and store the user's GitHub PAT (encrypted at rest)."""
@@ -85,7 +97,7 @@ async def save_github_token(
 
 @router.delete("/github/token", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_github_token(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
     session: Any = Depends(get_session),
 ):
     result = await session.exec(select(User).where(User.id == current_user.id))
@@ -97,7 +109,7 @@ async def delete_github_token(
 
 @router.get("/github/token/status", response_model=TokenStatusResponse)
 async def github_token_status(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
 ):
     return TokenStatusResponse(connected=bool(current_user.github_token_enc))
 
@@ -110,7 +122,7 @@ async def github_token_status(
 async def link_github_repo(
     project_id: str,
     body: LinkRepoRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
     session: Any = Depends(get_session),
 ):
     """Set or clear the GitHub repo/branch for a project."""
@@ -169,7 +181,7 @@ async def link_github_repo(
 @router.post("/projects/{project_id}/github/push", response_model=PushResponse)
 async def trigger_push(
     project_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
     session: Any = Depends(get_session),
 ):
     """Manually push implementation content to GitHub."""
@@ -197,7 +209,7 @@ async def trigger_push(
 @router.post("/projects/{project_id}/github/pr", response_model=PRResponse)
 async def trigger_pr(
     project_id: str,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(_require_pro_or_ultra),
     session: Any = Depends(get_session),
 ):
     """Manually open a GitHub pull request for this project."""

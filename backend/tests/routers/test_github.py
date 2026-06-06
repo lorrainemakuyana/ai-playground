@@ -19,12 +19,12 @@ from models.enums import PlanTier, SDLCPhase, ProjectStatus
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_user(github_token_enc: str | None = None) -> User:
+def _make_user(github_token_enc: str | None = None, plan: PlanTier = PlanTier.ULTRA) -> User:
     return User(
         id="gh-user-0001",
         email="gh@example.com",
         password_hash="x",
-        plan=PlanTier.ULTRA,
+        plan=plan,
         github_token_enc=github_token_enc,
     )
 
@@ -54,6 +54,57 @@ def _make_client_context(app, factory, user: User):
 
     app.dependency_overrides[get_session] = override_session
     app.dependency_overrides[get_current_user] = override_user
+
+
+# ---------------------------------------------------------------------------
+# Plan gate
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_free_user_cannot_access_github_token(test_engine):
+    from main import app
+
+    user = _make_user(plan=PlanTier.FREE)
+    factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    _make_client_context(app, factory, user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/github/token/status")
+
+    app.dependency_overrides.clear()
+    assert resp.status_code == 403
+    assert "Pro or Ultra" in resp.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_free_user_cannot_save_token(test_engine):
+    from main import app
+
+    user = _make_user(plan=PlanTier.FREE)
+    factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    _make_client_context(app, factory, user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.post("/github/token", json={"token": "ghp_test"})
+
+    app.dependency_overrides.clear()
+    assert resp.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_pro_user_can_access_github(test_engine):
+    from main import app
+
+    user = _make_user(plan=PlanTier.PRO, github_token_enc="enc")
+    factory = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
+    _make_client_context(app, factory, user)
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
+        resp = await ac.get("/github/token/status")
+
+    app.dependency_overrides.clear()
+    assert resp.status_code == 200
+    assert resp.json()["connected"] is True
 
 
 # ---------------------------------------------------------------------------

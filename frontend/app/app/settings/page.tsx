@@ -9,7 +9,7 @@ import PlanTierBadge from '@/components/PlanTierBadge'
 import Spinner from '@/components/Spinner'
 import { PLAN_FEATURES } from '@/lib/constants'
 
-function GitHubSection() {
+function GitHubSection({ locked }: { locked: boolean }) {
   const [connected, setConnected] = useState<boolean | null>(null)
   const [token, setToken] = useState('')
   const [saving, setSaving] = useState(false)
@@ -17,10 +17,11 @@ function GitHubSection() {
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (locked) return
     getGitHubTokenStatus()
       .then(r => setConnected(r.connected))
       .catch(() => setConnected(false))
-  }, [])
+  }, [locked])
 
   async function handleSave() {
     if (!token.trim()) return
@@ -70,14 +71,26 @@ function GitHubSection() {
         Connect a GitHub Personal Access Token (PAT) to auto-push generated code and open pull requests. The token is encrypted at rest and never shown again.
       </p>
 
-      {connected === null && (
+      {locked && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-neutral-800/60 px-4 py-3">
+          <p className="text-xs text-neutral-400">GitHub integration is available on Pro and Ultra plans.</p>
+          <Link
+            href="/app/billing"
+            className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg bg-primary-600 hover:bg-primary-500 text-white transition-colors"
+          >
+            Upgrade →
+          </Link>
+        </div>
+      )}
+
+      {!locked && connected === null && (
         <div className="flex items-center gap-2 py-2">
           <Spinner />
           <span className="text-xs text-neutral-500">Checking…</span>
         </div>
       )}
 
-      {connected !== null && !connected && (
+      {!locked && connected !== null && !connected && (
         <div className="space-y-3">
           <div className="space-y-1.5">
             <label className="block text-xs font-medium text-neutral-400">
@@ -108,7 +121,7 @@ function GitHubSection() {
         </div>
       )}
 
-      {connected && (
+      {!locked && connected && (
         <div className="flex items-center justify-between gap-4">
           <p className="text-xs text-neutral-400">
             Token saved. To rotate it, remove it and add a new one.
@@ -138,7 +151,7 @@ export default function SettingsPage() {
     <main className="mx-auto max-w-3xl px-4 py-8 space-y-6">
       <h1 className="text-2xl font-bold text-neutral-100">Settings</h1>
 
-      <GitHubSection />
+      <GitHubSection locked={effectivePlan === 'free'} />
 
       <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
         <h2 className="text-sm font-semibold text-neutral-300">Plan</h2>

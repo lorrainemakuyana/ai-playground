@@ -4,7 +4,9 @@
 [build]
   base = "frontend"
   command = "npm run build"
-  publish = "frontend/.next"
+  # No `publish` here on purpose: @netlify/plugin-nextjs sets the publish
+  # directory itself. Hardcoding it (e.g. "frontend/.next") double-applies the
+  # base path -> "frontend/frontend/.next" -> "deploy directory does not exist".
 
 [build.environment]
   NODE_VERSION = "20"

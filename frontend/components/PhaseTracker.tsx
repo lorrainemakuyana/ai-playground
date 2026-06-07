@@ -12,8 +12,8 @@ export default function PhaseTracker({ currentPhase }: PhaseTrackerProps) {
   const isDone = currentPhase === 'done'
 
   return (
-    <div className="w-full h-16 flex items-center px-6 bg-neutral-900 border-b border-neutral-800">
-      <div className="flex items-center w-full">
+    <div className="w-full flex items-center px-3 sm:px-6 bg-neutral-900 border-b border-neutral-800 overflow-x-auto">
+      <div className="flex items-center w-full min-w-max py-3 sm:py-0 sm:h-16">
         {ALL_PHASES.map((phase, idx) => {
           const isCompleted = isDone || idx < currentIdx
           const isCurrent   = !isDone && idx === currentIdx

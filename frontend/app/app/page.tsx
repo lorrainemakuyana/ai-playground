@@ -155,10 +155,11 @@ export default function AppHomePage() {
           <div className="flex items-center gap-2">
             <Link
               href="/app/agents"
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 text-sm font-medium rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 transition-colors"
+              title="Manage Agents"
             >
               <svg
-                className="w-4 h-4"
+                className="w-4 h-4 flex-none"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -170,15 +171,16 @@ export default function AppHomePage() {
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              Manage Agents
+              <span className="hidden sm:inline">Manage Agents</span>
             </Link>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-2.5 py-2 sm:px-3 text-sm font-medium rounded-lg text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors disabled:opacity-50"
+              title="Sign out"
             >
               <svg
-                className="w-4 h-4"
+                className="w-4 h-4 flex-none"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -190,7 +192,7 @@ export default function AppHomePage() {
                   d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                 />
               </svg>
-              {loggingOut ? "Signing out…" : "Sign out"}
+              <span className="hidden sm:inline">{loggingOut ? "Signing out…" : "Sign out"}</span>
             </button>
           </div>
         </div>

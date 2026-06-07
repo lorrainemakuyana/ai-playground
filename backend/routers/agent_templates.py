@@ -9,8 +9,15 @@ from database import get_session
 from dependencies import get_current_user
 from models.db import AgentTemplate, User
 from models.schemas import AgentTemplateSchema, CreateAgentTemplateRequest, UpdateAgentTemplateRequest
+from services.agent_prompts import MASTER_PROMPTS
 
 router = APIRouter()
+
+
+@router.get("/master-prompts", response_model=dict[str, str])
+async def get_master_prompts() -> dict[str, str]:
+    """Return the master system prompt for each agent role (no auth required)."""
+    return {role.value: prompt for role, prompt in MASTER_PROMPTS.items()}
 
 
 @router.get("", response_model=list[AgentTemplateSchema])

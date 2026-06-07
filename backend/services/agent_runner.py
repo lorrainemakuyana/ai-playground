@@ -8,6 +8,8 @@ import anthropic
 
 from models.db import Agent, Task, Project, AgentMessage
 from models.enums import AgentRole
+from services.agent_prompts import MASTER_PROMPTS
+from services.context_builder import build_project_context
 
 if TYPE_CHECKING:
     from models.enums import PlanTier
@@ -20,37 +22,6 @@ RETRY_BACKOFF_BASE = 2.0
 API_TIMEOUT = 120.0  # seconds; Sonnet on complex tasks can take 60-90s
 
 
-_DEFAULT_SYSTEM_PROMPTS: dict[AgentRole, str] = {
-    AgentRole.TECH_LEAD: (
-        "You are a principal tech lead responsible for requirements, architecture, and technical direction. "
-        "Be thorough, precise, and make opinionated decisions with clear justification.\n\n"
-        "When you receive a user directive and need to delegate work to other agents, use this exact format "
-        "for each delegation at the end of your response:\n"
-        "<delegate role=\"engineer-1\">Full task description for the engineer</delegate>\n"
-        "Valid roles: tech-lead, engineer-1, engineer-2, qa, sre. "
-        "Only delegate when the task genuinely requires another specialist. "
-        "If you can handle the request fully yourself, do so without delegating."
-    ),
-    AgentRole.ENGINEER_1: (
-        "You are a senior software engineer implementing core features. "
-        "When asked to implement code, output complete, runnable files using <file path=\"...\">...</file> tags. "
-        "Never truncate file contents. Never use placeholders. Write production-quality code."
-    ),
-    AgentRole.ENGINEER_2: (
-        "You are a senior software engineer implementing supporting features and integrations. "
-        "When asked to implement code, output complete, runnable files using <file path=\"...\">...</file> tags. "
-        "Never truncate file contents. Never use placeholders. Write production-quality code."
-    ),
-    AgentRole.QA: (
-        "You are a QA engineer. Produce detailed, executable test plans and test cases. "
-        "When writing test code, use <file path=\"...\">...</file> tags."
-    ),
-    AgentRole.SRE: (
-        "You are an SRE. Assess infrastructure, reliability, and operational readiness. "
-        "When producing config files or runbooks, use <file path=\"...\">...</file> tags."
-    ),
-    AgentRole.CUSTOM: "You are a specialist agent. Complete the task thoroughly.",
-}
 
 
 def get_model_for_agent(agent: Agent, plan: "PlanTier") -> str:
@@ -76,28 +47,52 @@ def get_model_for_agent(agent: Agent, plan: "PlanTier") -> str:
 
 
 def get_system_prompt(agent: Agent) -> str:
-    if agent.system_prompt:
-        return agent.system_prompt
-    return _DEFAULT_SYSTEM_PROMPTS.get(agent.role, f"You are a {agent.role.value} agent.")
+    """Return the effective system prompt: master prompt merged with any user customisation.
+
+    The master prompt is always the foundation. A user-supplied system_prompt
+    is appended after a separator so the agent retains its role identity.
+    """
+    master = MASTER_PROMPTS.get(agent.role, MASTER_PROMPTS[AgentRole.CUSTOM])
+    if agent.system_prompt and agent.system_prompt.strip():
+        return master + "\n\n---\n\n## Your Custom Instructions\n\n" + agent.system_prompt.strip()
+    return master
 
 
 def build_messages_for_task(
     task: Task,
     project: Project,
     conversation_history: list[dict[str, Any]],
+    all_tasks: list[Task] | None = None,
 ) -> list[dict[str, Any]]:
-    """Build the messages list for an agent task call."""
-    user_message = {
-        "role": "user",
-        "content": (
-            f"\nProject: {project.name}\n"
+    """Build the messages list for an agent task call.
+
+    Prepends a compact project-context block (built from ``all_tasks``) to the
+    user message so the agent has structured project state without a raw message
+    dump. When ``all_tasks`` is omitted the context block falls back to the
+    minimal header used before this feature was introduced.
+    """
+    if all_tasks is not None:
+        context_block = build_project_context(project, all_tasks, task.role or AgentRole.CUSTOM)
+        content = (
+            f"{context_block}\n\n"
+            f"---\n\n"
+            f"## Your Task\n\n"
+            f"**{task.title}**\n\n"
+            f"{task.description}\n"
+        )
+    else:
+        content = (
+            f"Project: {project.name}\n"
             f"Description: {project.description}\n"
             f"Current Phase: {task.phase}\n\n"
             f"Your Task: {task.title}\n"
             f"{task.description}\n"
-        ),
-    }
+        )
+    user_message = {"role": "user", "content": content}
     return [*conversation_history, user_message]
+
+
+_MAX_HISTORY_MESSAGES = 10
 
 
 async def get_conversation_history(
@@ -105,7 +100,12 @@ async def get_conversation_history(
     project_id: str,
     session: Any,
 ) -> list[dict[str, Any]]:
-    """Retrieve and format conversation history for an agent."""
+    """Retrieve and format conversation history for an agent.
+
+    Capped to the most recent ``_MAX_HISTORY_MESSAGES`` messages to stay within
+    context windows for long-running projects. Older history is represented by
+    the structured project-context block injected by ``build_messages_for_task``.
+    """
     from sqlalchemy import or_, and_
 
     result = await session.exec(
@@ -124,6 +124,9 @@ async def get_conversation_history(
     )
     messages_db = result.all()
 
+    # Keep only the tail to bound token usage
+    messages_db = messages_db[-_MAX_HISTORY_MESSAGES:]
+
     history: list[dict[str, Any]] = []
     for msg in messages_db:
         role = "assistant" if msg.from_agent_id == agent_id else "user"
@@ -138,11 +141,14 @@ async def run_agent_task(
     conversation_history: list[dict[str, Any]],
     session_factory: Any,
     plan: "PlanTier" = None,
+    all_tasks: list[Task] | None = None,
 ) -> None:
     """Run an agent task with retry logic and streaming output chunks.
 
     ``plan`` is the project owner's effective plan, used to clamp the model.
     Defaults to FREE (the safe floor) when not supplied.
+    ``all_tasks`` is a snapshot of all project tasks used to build the compact
+    context block. When omitted, a minimal header is used instead.
     """
     import services.orchestrator as orchestrator
     from models.enums import PlanTier
@@ -150,7 +156,7 @@ async def run_agent_task(
     if plan is None:
         plan = PlanTier.FREE
 
-    messages = build_messages_for_task(task, project, conversation_history)
+    messages = build_messages_for_task(task, project, conversation_history, all_tasks)
     model = get_model_for_agent(agent, plan)
     system_prompt = get_system_prompt(agent)
 

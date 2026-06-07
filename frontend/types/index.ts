@@ -21,6 +21,9 @@ export type ProjectStatus = 'active' | 'paused' | 'done'
 export type PlanTier = 'free' | 'pro' | 'ultra'
 export type Currency = 'GBP' | 'USD'
 
+/** Role → master system prompt text, keyed by AgentRole value strings. */
+export type MasterPrompts = Record<string, string>
+
 export interface CurrentUser {
   id: string
   email: string

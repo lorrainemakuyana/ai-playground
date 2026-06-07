@@ -130,6 +130,10 @@ export async function getAgentTemplates() {
   return fetchJSON<import('@/types').AgentTemplate[]>('/agent-templates')
 }
 
+export async function getMasterPrompts() {
+  return fetchJSON<import('@/types').MasterPrompts>('/agent-templates/master-prompts')
+}
+
 export async function createAgentTemplate(data: { role: string; specialization: string; model_name: string; system_prompt?: string | null }) {
   return fetchJSON<import('@/types').AgentTemplate>('/agent-templates', {
     method: 'POST',

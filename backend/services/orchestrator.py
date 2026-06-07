@@ -271,6 +271,11 @@ async def advance_phase(project_id: str, session: Any) -> SDLCPhase | None:
     if next_phase == SDLCPhase.DONE:
         project.status = ProjectStatus.DONE
 
+    # Invalidate context cache for the new phase — context will be rebuilt
+    # fresh when the first task in the new phase is dispatched.
+    from services.context_builder import invalidate_context_cache
+    invalidate_context_cache(project_id)
+
     tasks_created = await _seed_tasks(project_id, next_phase, session)
 
     await session.commit()
@@ -382,10 +387,32 @@ async def dispatch_task(task: Task, session: Any) -> None:
         },
     )
 
-    # Get conversation history and fire background task
+    # Get conversation history and all project tasks for context builder
     history = await agent_runner.get_conversation_history(agent.id, task.project_id, session)
 
+    tasks_result = await session.exec(
+        select(Task).where(Task.project_id == task.project_id).order_by(Task.created_at.asc())
+    )
+    all_project_tasks = tasks_result.all()
+
     # Snapshot objects needed by the background task (avoid session detachment issues)
+    task_snapshots = [
+        Task(
+            id=t.id,
+            project_id=t.project_id,
+            assigned_agent_id=t.assigned_agent_id,
+            phase=t.phase,
+            title=t.title,
+            description=t.description,
+            status=t.status,
+            output=t.output,
+            role=t.role,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in all_project_tasks
+    ]
+
     agent_snapshot = Agent(
         id=agent.id,
         project_id=agent.project_id,
@@ -425,6 +452,7 @@ async def dispatch_task(task: Task, session: Any) -> None:
             history,
             async_session_factory,
             plan=owner_plan,
+            all_tasks=task_snapshots,
         )
     )
     _running_tasks[task.id] = bg

@@ -220,7 +220,7 @@ export default function ProjectDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col">
+    <div className="bg-neutral-950 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
       {/* Top bar */}
       <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 h-14 border-b border-neutral-800 bg-neutral-900 flex-none overflow-x-auto">
         <Link
@@ -373,8 +373,8 @@ export default function ProjectDashboardPage() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden flex-col md:flex-row">
-        <div className="w-full md:w-[340px] flex-none border-b md:border-b-0 md:border-r border-neutral-800 overflow-y-auto">
+      <div className="flex flex-1 overflow-hidden flex-col md:flex-row min-h-0">
+        <div className="w-full md:w-[340px] flex-none border-b md:border-b-0 md:border-r border-neutral-800 overflow-y-auto max-h-[38vh] md:max-h-none">
           <div className="p-4 border-b border-neutral-800 flex items-center justify-between">
             <span className="text-sm font-semibold text-neutral-200">Team</span>
             <span className="text-xs text-neutral-500">{agents.length} agents</span>
@@ -410,7 +410,7 @@ export default function ProjectDashboardPage() {
           )}
         </div>
 
-        <div className="flex-1 overflow-hidden flex flex-col min-h-[400px] md:min-h-0">
+        <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           <TaskFeed
             tasks={selectedAgentId ? tasks.filter(t => t.assigned_agent_id === selectedAgentId) : tasks}
             filterLabel={selectedAgentId ? (agents.find(a => a.id === selectedAgentId)?.specialization ?? null) : null}

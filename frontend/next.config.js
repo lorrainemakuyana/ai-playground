@@ -1,15 +1,14 @@
 /** @type {import('next').NextConfig} */
 const withPWA = require('@ducanh2912/next-pwa').default({
   dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
   disable: process.env.NODE_ENV === 'development',
   workboxOptions: {
     disableDevLogs: true,
     runtimeCaching: [
       {
-        urlPattern: /^\/api\/.*/i,
+        // Workbox matches against the full URL, so don't use a ^ anchor.
+        // This covers all requests whose path starts with /api/.
+        urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
         handler: 'NetworkOnly',
       },
     ],

@@ -45,9 +45,9 @@ export default function manifest(): MetadataRoute.Manifest {
     ],
     shortcuts: [
       {
-        name: 'New Project',
+        name: 'My Projects',
         url: '/app',
-        description: 'Create a new AI-powered project',
+        description: 'Open your projects',
       },
     ],
   }

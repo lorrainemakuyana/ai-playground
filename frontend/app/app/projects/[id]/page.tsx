@@ -220,7 +220,7 @@ export default function ProjectDashboardPage() {
   }
 
   return (
-    <div className="bg-neutral-950 flex flex-col" style={{ height: '100dvh', overflow: 'hidden' }}>
+    <div className="bg-neutral-950 flex flex-col h-dvh overflow-hidden">
       {/* Top bar */}
       <div className="flex items-center gap-2 sm:gap-4 px-3 sm:px-6 h-14 border-b border-neutral-800 bg-neutral-900 flex-none overflow-x-auto">
         <Link

@@ -13,7 +13,12 @@ export default function InstallPrompt() {
 
   useEffect(() => {
     const stored = localStorage.getItem('pwa-install-dismissed')
-    if (stored) { setDismissed(true); return }
+    if (stored) {
+      const dismissedAt = parseInt(stored, 10)
+      const sevenDays = 7 * 24 * 60 * 60 * 1000
+      if (Date.now() - dismissedAt < sevenDays) { setDismissed(true); return }
+      localStorage.removeItem('pwa-install-dismissed')
+    }
 
     function handler(e: Event) {
       e.preventDefault()
@@ -36,7 +41,7 @@ export default function InstallPrompt() {
   }
 
   function dismiss() {
-    localStorage.setItem('pwa-install-dismissed', '1')
+    localStorage.setItem('pwa-install-dismissed', String(Date.now()))
     setDismissed(true)
   }
 

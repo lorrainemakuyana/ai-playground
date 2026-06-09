@@ -101,7 +101,7 @@ export default function TaskFeed({ tasks, onTaskClick, isConnected, onSendDirect
       </div>
 
       {/* Directive input */}
-      <div className="border-t border-neutral-800 p-3 sm:p-3 flex-none bg-neutral-900">
+      <div className="border-t border-neutral-800 p-3 flex-none bg-neutral-900">
         <div className="flex items-end gap-2">
           <textarea
             ref={textareaRef}

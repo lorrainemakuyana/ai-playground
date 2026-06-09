@@ -35,6 +35,7 @@ export default function InstallPrompt() {
     await deferredPrompt.prompt()
     const { outcome } = await deferredPrompt.userChoice
     if (outcome === 'accepted' || outcome === 'dismissed') {
+      localStorage.setItem('pwa-install-dismissed', String(Date.now()))
       setDeferredPrompt(null)
       setDismissed(true)
     }

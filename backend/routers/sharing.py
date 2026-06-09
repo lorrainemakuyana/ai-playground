@@ -5,7 +5,7 @@ import secrets
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlmodel import select
 
@@ -14,6 +14,7 @@ from dependencies import get_accessible_project, get_current_user, get_effective
 from models.db import Project, ProjectShare, ProjectShareLink, User
 from models.schemas import InviteByEmailRequest, ProjectShareSchema, ShareLinkSchema
 from plans import sharing_allowed
+from rate_limit import limiter
 
 router = APIRouter()
 
@@ -30,7 +31,9 @@ def _utcnow() -> datetime:
 # ---------------------------------------------------------------------------
 
 @router.post("/join/{token}", status_code=status.HTTP_200_OK)
+@limiter.limit("20/minute")
 async def join_via_link(
+    request: Request,
     token: str,
     session: Any = Depends(get_session),
     current_user: User = Depends(get_current_user),
@@ -41,6 +44,9 @@ async def join_via_link(
     link = link_result.first()
     if not link:
         raise HTTPException(status_code=404, detail="Share link not found or has been revoked")
+
+    if link.expires_at is not None and link.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=410, detail="This share link has expired")
 
     project_result = await session.exec(select(Project).where(Project.id == link.project_id))
     project = project_result.first()

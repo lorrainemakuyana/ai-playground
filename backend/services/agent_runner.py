@@ -17,6 +17,19 @@ from sqlmodel import select
 
 logger = logging.getLogger(__name__)
 
+
+def _safe_error_msg(exc: Exception) -> str:
+    import anthropic
+    import asyncio
+    if isinstance(exc, anthropic.APIStatusError):
+        return f"AI service error (HTTP {exc.status_code})"
+    if isinstance(exc, (anthropic.APITimeoutError, anthropic.APIConnectionError)):
+        return "AI service unreachable — please try again"
+    if isinstance(exc, asyncio.TimeoutError):
+        return "Agent timed out"
+    return "Unexpected error — please try again"
+
+
 MAX_RETRIES = 3
 RETRY_BACKOFF_BASE = 2.0
 API_TIMEOUT = 120.0  # seconds; Sonnet on complex tasks can take 60-90s
@@ -223,7 +236,7 @@ async def run_agent_task(
             logger.exception("Unexpected error running agent task %s", task.id)
             break
 
-    error_msg = str(last_error) if last_error else "Unknown error"
+    error_msg = _safe_error_msg(last_error) if last_error else "Unexpected error — please try again"
     logger.error("Agent task %s failed after %d attempt(s): %s", task.id, attempt + 1, error_msg)
     async with session_factory() as session:
         await orchestrator.handle_agent_failure(task.id, agent.id, error_msg, session)

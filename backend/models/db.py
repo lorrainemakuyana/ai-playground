@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
 from sqlalchemy import Enum as SAEnum
@@ -187,3 +187,6 @@ class ProjectShareLink(SQLModel, table=True):
     project_id: str = Field(foreign_key="projects.id", unique=True, index=True)
     token: str = Field(unique=True, index=True)
     created_at: datetime = Field(default_factory=_utcnow)
+    expires_at: Optional[datetime] = Field(
+        default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=30)
+    )

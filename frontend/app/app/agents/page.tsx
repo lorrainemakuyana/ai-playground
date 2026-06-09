@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import {
   getAgentTemplates, createAgentTemplate, updateAgentTemplate, archiveAgentTemplate,
+  getMasterPrompts,
 } from '@/lib/api'
 import { agentAvatarClass, getInitials } from '@/lib/utils'
-import type { AgentTemplate, AgentRole } from '@/types'
+import type { AgentTemplate, AgentRole, MasterPrompts } from '@/types'
 import Spinner from '@/components/Spinner'
 
 const MODELS = [
@@ -39,6 +40,8 @@ interface NewAgentState {
 
 export default function DefaultTeamPage() {
   const [templates, setTemplates] = useState<AgentTemplate[]>([])
+  const [masterPrompts, setMasterPrompts] = useState<MasterPrompts>({})
+  const [openPrompts, setOpenPrompts] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -53,14 +56,24 @@ export default function DefaultTeamPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await getAgentTemplates()
+      const [data, prompts] = await Promise.all([getAgentTemplates(), getMasterPrompts()])
       setTemplates(data)
+      setMasterPrompts(prompts)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
     } finally {
       setLoading(false)
     }
   }, [])
+
+  function togglePrompt(id: string) {
+    setOpenPrompts(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   useEffect(() => { void load() }, [load])
 
@@ -211,37 +224,67 @@ export default function DefaultTeamPage() {
                   </div>
                 </div>
               ) : (
-                <div className="flex items-center gap-4">
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold uppercase select-none flex-none ${agentAvatarClass(tmpl.role)}`}>
-                    {getInitials(tmpl.role)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-neutral-100">{tmpl.specialization}</p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      {ROLES.find(r => r.value === tmpl.role)?.label ?? tmpl.role}
-                      {' · '}
-                      <span className="font-mono">{MODELS.find(m => m.value === tmpl.model_name)?.label ?? tmpl.model_name}</span>
-                    </p>
-                    {tmpl.system_prompt && (
-                      <p className="text-xs text-neutral-600 mt-1.5 font-mono line-clamp-2">{tmpl.system_prompt}</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1 flex-none">
-                    <button onClick={() => startEdit(tmpl)}
-                      className="p-2 rounded-lg text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
-                      title="Edit">
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                    {!isTechLead && (
-                      <button onClick={() => handleArchive(tmpl.id)}
-                        className="p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-colors"
-                        title="Archive">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-base font-bold uppercase select-none flex-none ${agentAvatarClass(tmpl.role)}`}>
+                      {getInitials(tmpl.role)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-neutral-100">{tmpl.specialization}</p>
+                      <p className="text-xs text-neutral-500 mt-0.5">
+                        {ROLES.find(r => r.value === tmpl.role)?.label ?? tmpl.role}
+                        {' · '}
+                        <span className="font-mono">{MODELS.find(m => m.value === tmpl.model_name)?.label ?? tmpl.model_name}</span>
+                      </p>
+                      {tmpl.system_prompt && (
+                        <p className="text-xs text-neutral-600 mt-1.5 font-mono line-clamp-2">{tmpl.system_prompt}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 flex-none">
+                      <button onClick={() => startEdit(tmpl)}
+                        className="p-2 rounded-lg text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+                        title="Edit">
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                         </svg>
                       </button>
+                      {!isTechLead && (
+                        <button onClick={() => handleArchive(tmpl.id)}
+                          className="p-2 rounded-lg text-neutral-500 hover:text-red-400 hover:bg-neutral-800 transition-colors"
+                          title="Archive">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Base prompt disclosure */}
+                  <div className="border-t border-neutral-800 pt-2">
+                    <button
+                      onClick={() => togglePrompt(tmpl.id)}
+                      className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors w-full text-left"
+                    >
+                      <svg
+                        className={`w-3.5 h-3.5 transition-transform duration-150 ${openPrompts.has(tmpl.id) ? 'rotate-90' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      Base prompt
+                    </button>
+
+                    {openPrompts.has(tmpl.id) && (
+                      <div className="mt-2">
+                        {masterPrompts[tmpl.role] ? (
+                          <pre className="text-xs text-neutral-400 font-mono bg-neutral-950 border border-neutral-800 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                            {masterPrompts[tmpl.role]}
+                          </pre>
+                        ) : (
+                          <p className="text-xs text-neutral-600 italic">No base prompt for this role.</p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

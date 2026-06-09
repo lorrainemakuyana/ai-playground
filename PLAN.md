@@ -1,118 +1,127 @@
-# Feature: Progressive Web App (PWA)
+# Feature: Agent Context Summarisation & Master Role Prompts
 
 ## Goal
 
-Make the SDLC Orchestrator installable as a Progressive Web App on iOS and Android so that users can add it to their home screen, use it from a native-feeling shell without a browser chrome, and have the UI shell cached for fast startup. The entire implementation is frontend-only — no backend changes required. Deployment remains on Netlify via `@netlify/plugin-nextjs`.
+Improve agent output quality and reduce token waste by giving every agent a compact, structured project-context block at the start of each task (replacing the raw full-message dump), and by replacing the current thin placeholder system prompts with authoritative master role prompts for all five default agent roles. Master prompts define each agent's identity, responsibilities, output format, quality bar, and tone. They are merged with any user-supplied system prompt from the AgentTemplate. A read-only "Base prompt" disclosure on the Agents page lets users inspect the master prompt for each role.
 
 ---
 
 ## User Stories
 
-- [ ] **US-1** As a mobile user, I want to install the app on my home screen so that I can open it like a native app without navigating to a URL.
-- [ ] **US-2** As an iOS user, I want the app to feel native (no Safari browser bar, themed status bar) so that it doesn't look like a website when launched from the home screen.
-- [ ] **US-3** As a mobile user, I want all pages to be readable and usable on a small screen so that I don't have to pinch-zoom or scroll horizontally.
-- [ ] **US-4** As a user on a slow or intermittent connection, I want the app shell to load instantly on repeat visits so that I'm not blocked waiting for the network.
-- [ ] **US-5** As a user who loses connection mid-session, I want a friendly offline page instead of the browser's default error so that I know the app is still installed and working.
-- [ ] **US-6** As a first-time mobile visitor, I want to see an "Add to Home Screen" prompt so that I know I can install the app.
+- [ ] **US-1** As an agent, I want to receive a concise, structured summary of the project state so that I have the full context I need without being overwhelmed by raw message history.
+- [ ] **US-2** As a tech lead agent, I want a detailed role prompt that tells me exactly how to decompose work, when to delegate, and what format to produce so that my output is consistently high quality.
+- [ ] **US-3** As an engineer, QA, or SRE agent, I want a detailed role prompt that defines my responsibilities, output format, and quality bar so that my output is production-ready on the first attempt.
+- [ ] **US-4** As a user who has written a custom system prompt for an agent template, I want my custom additions to extend — not replace — the master prompt so that the agent keeps its role identity.
+- [ ] **US-5** As a user browsing agent templates, I want to read the base prompt for each role so that I understand what the agent is capable of and what I'm extending when I customise it.
 
 ---
 
 ## Acceptance Criteria
 
-### US-1 — Installable manifest
-- [ ] `app/manifest.ts` exports a `MetadataRoute.Manifest` with `name`, `short_name`, `start_url: "/app"`, `display: "standalone"`, `background_color`, `theme_color`, and at least three icon sizes (192×192, 384×384, 512×512 PNG).
-- [ ] Icons exist in `public/icons/` — generated from the app's existing colour scheme (dark background, primary accent).
-- [ ] Chrome/Edge on Android shows the native install prompt (three-dot → "Install app") after two visits.
-- [ ] The manifest passes Chrome DevTools → Application → Manifest validation with no errors.
+### US-1 — Project context block
 
-### US-2 — iOS meta tags
-- [ ] `app/layout.tsx` includes `<link rel="apple-touch-icon" href="/icons/icon-192.png" />`.
-- [ ] `<meta name="apple-mobile-web-app-capable" content="yes" />` is set.
-- [ ] `<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />` is set.
-- [ ] `<meta name="theme-color" content="#0a0a0a" />` matches `background_color` in the manifest.
-- [ ] When added to iOS home screen via Safari "Add to Home Screen", the app opens without Safari navigation UI.
+- [ ] A new `build_project_context(project, tasks, agent_role, session)` function in `services/context_builder.py` produces a markdown-formatted block ≤ 400 tokens (measured with `tiktoken` or approximated at 4 chars/token) containing:
+  - Project name, description, current phase.
+  - A one-line summary of each completed phase (e.g. "✓ Discovery: Requirements captured, stack chosen: FastAPI + Next.js").
+  - Relevant prior task outputs for the calling agent's role (last 3 tasks in the same role, truncated to 300 tokens each if needed).
+  - A section listing tasks assigned to this agent that are `done` or `in-progress`.
+- [ ] Context is cached in an in-process dict keyed by `(project_id, phase)` and invalidated on phase change.
+- [ ] `build_messages_for_task()` in `agent_runner.py` prepends this context block to the user message instead of the current minimal header.
+- [ ] Raw conversation history (`get_conversation_history`) is still passed through but capped: only the last 10 messages are included (to stay within context windows for long-running projects).
+- [ ] All existing `run_agent_task` tests continue to pass.
 
-### US-3 — Mobile-responsive UI
-- [ ] All pages render without horizontal scroll on a 375 px viewport (iPhone SE baseline).
-- [ ] Navigation / header collapses to a hamburger or bottom tab bar on `sm` breakpoint.
-- [ ] Project list cards stack to full-width on mobile.
-- [ ] Project dashboard: phase tracker scrolls horizontally or collapses to a vertical stepper on mobile; agent cards stack; task feed is full-width.
-- [ ] Task output drawer is full-screen on mobile (not a side panel).
-- [ ] Settings, billing, pricing pages are single-column on mobile.
-- [ ] All tap targets are ≥ 44 × 44 px.
-- [ ] Text is legible at default zoom (no sub-12 px body text).
+### US-2 — Tech Lead master prompt
 
-### US-4 — Service worker / shell caching
-- [ ] `@ducanh2912/next-pwa` is installed and wired into `next.config.js`.
-- [ ] Service worker is registered automatically and visible in DevTools → Application → Service Workers.
-- [ ] App shell (layout, fonts, main JS chunks) is pre-cached on install.
-- [ ] `/api/*` routes are **not** cached by the service worker (always network-first).
-- [ ] Second load of the app with network throttled to "offline" shows the shell instantly (no blank screen).
+- [ ] `services/agent_prompts.py` defines `MASTER_PROMPTS[AgentRole.TECH_LEAD]` as a multi-paragraph string covering:
+  - **Identity**: Principal tech lead, strategic decision-maker, team coordinator.
+  - **Responsibilities**: Decompose project into phases and tasks; assign to the right role; review agent output; make architectural decisions; handle user directives.
+  - **Delegation format** (required section): explain `<delegate role="...">...</delegate>` tags with valid roles, when to use them (delegate only when the task genuinely requires another specialist), and that the full task description must be self-contained in the tag body.
+  - **Output format**: structured markdown with clear headings; decisions recorded with rationale.
+  - **Quality bar**: decisions must be justified; no hand-waving; if ambiguous, state assumptions explicitly.
+  - **Tone**: direct, opinionated, clear. Avoid filler phrases.
 
-### US-5 — Offline fallback
-- [ ] `public/offline.html` (or `app/offline/page.tsx`) renders a branded message: "You're offline — reconnect to continue working."
-- [ ] Navigating to any page while offline shows the fallback instead of the browser's default error.
+### US-3 — Engineer, QA, SRE master prompts
 
-### US-6 — Install prompt component
-- [ ] `components/InstallPrompt.tsx` listens for the `beforeinstallprompt` event (Chrome/Edge/Android).
-- [ ] When the event fires, a dismissible banner appears at the bottom of the screen: "Install Orchestrator — Add to home screen for the best experience" + "Install" button + "×" dismiss.
-- [ ] Clicking "Install" calls `prompt()` on the deferred event.
-- [ ] Dismissed state is saved in `localStorage` so the banner does not re-appear after dismissal.
-- [ ] The component is `"use client"` and rendered in the root layout only on mobile (`navigator.standalone === false` guard for iOS).
-- [ ] The banner does not appear on desktop browsers.
+- [ ] `MASTER_PROMPTS[AgentRole.ENGINEER_1]` and `[AgentRole.ENGINEER_2]` cover:
+  - Identity (senior software engineer), language-agnostic.
+  - File output format: `<file path="...">complete contents</file>` — no truncation, no placeholders.
+  - Expectations: include all config files, make code run with a single install command.
+  - Quality bar: production-quality, with error handling, input validation, and tests where asked.
+  - Tone: precise, minimal commentary; let the code speak.
+
+- [ ] `MASTER_PROMPTS[AgentRole.QA]` covers:
+  - Identity (QA engineer / test strategist).
+  - Responsibilities: write test plans, test cases, and runnable test code.
+  - Output format: markdown test plan + `<file>` blocks for test code.
+  - Quality bar: tests must be deterministic, isolated, and cover edge cases; include both happy-path and failure scenarios.
+  - Tone: methodical, thorough.
+
+- [ ] `MASTER_PROMPTS[AgentRole.SRE]` covers:
+  - Identity (site reliability engineer / platform engineer).
+  - Responsibilities: review infrastructure, deployment configs, reliability risks, and observability.
+  - Output format: readiness report with PASS / WARN / FAIL ratings per area + `<file>` blocks for runbooks/configs.
+  - Quality bar: actionable recommendations only; flag blockers vs. nice-to-haves.
+  - Tone: risk-focused, concise.
+
+### US-4 — Prompt merging
+
+- [ ] `get_system_prompt(agent)` in `agent_runner.py` is updated to:
+  1. Look up `MASTER_PROMPTS.get(agent.role, MASTER_PROMPTS[AgentRole.CUSTOM])`.
+  2. If `agent.system_prompt` is set and non-empty, append it after a `\n\n---\n\n## Your Custom Instructions\n\n` separator.
+  3. Return the merged string.
+- [ ] If `agent.system_prompt` is `None` or empty, the master prompt alone is returned (no separator appended).
+- [ ] Existing behaviour is preserved: custom-role agents (`AgentRole.CUSTOM`) use a generic master prompt.
+- [ ] Default AgentTemplate seeds (`database.py` or equivalent seeder) set `system_prompt=None` so master prompt alone applies on fresh installs; existing templates in production are not modified by any migration.
+
+### US-5 — Frontend "Base prompt" disclosure
+
+- [ ] The Agents page (`/app/agents`) adds a collapsible "Base prompt" row below each template card.
+- [ ] The disclosed content renders the master prompt text in a monospace `<pre>` block (read-only).
+- [ ] Master prompt text is served from a new endpoint: `GET /agent-templates/master-prompts` → `{role: string}` dict (no auth required — prompts are not secret).
+- [ ] The UI shows "No base prompt" for `CUSTOM` roles with a generic fallback.
+- [ ] The disclosure chevron toggles open/closed; state is local (no persistence needed).
 
 ---
 
 ## Technical Scope
 
-### Frontend (Next.js)
+### Backend (FastAPI)
 
 **New files**
-- `app/manifest.ts` — Next.js 14 App Router manifest route (replaces a static `manifest.json`)
-- `app/offline/page.tsx` — branded offline fallback page
-- `components/InstallPrompt.tsx` — "Add to Home Screen" banner component
-- `public/icons/icon-192.png`, `icon-384.png`, `icon-512.png` — PWA icons (generated programmatically or via sharp during build, or committed as static PNGs)
-- `public/offline.html` — static fallback served by the service worker for navigation requests when offline
+- `backend/services/agent_prompts.py` — `MASTER_PROMPTS: dict[AgentRole, str]` constant dict; one entry per role including `CUSTOM` fallback.
+- `backend/services/context_builder.py` — `build_project_context(project, all_tasks, agent_role, completed_messages)` → `str`; in-process phase-keyed cache.
 
 **Modified files**
-- `next.config.js` (or `next.config.ts`) — wrap with `withPWA({ dest: "public", … })`
-- `app/layout.tsx` — add iOS meta tags, `<link rel="manifest">` (handled automatically by Next.js manifest route), `InstallPrompt` component
-- All page/layout files below — responsive Tailwind classes
+- `backend/services/agent_runner.py`
+  - `get_system_prompt(agent)` — merge master + user prompt as described.
+  - `build_messages_for_task()` — call `build_project_context` instead of the current minimal header.
+  - `get_conversation_history()` — cap result to last 10 messages.
+- `backend/routers/agent_templates.py` (or `agents.py`) — add `GET /agent-templates/master-prompts` endpoint.
+- `backend/main.py` — no changes expected (router already registered).
 
-**Responsive redesign targets** (Tailwind `sm:` / `md:` breakpoints)
-| File | Changes |
-|---|---|
-| `app/app/page.tsx` | Project list cards → full-width on mobile; header → single row |
-| `app/app/projects/[id]/page.tsx` | Phase tracker → horizontal scroll; agent cards → 1-col; task drawer → full-screen sheet on mobile |
-| `app/app/agents/page.tsx` | Agent template list → single column |
-| `app/app/projects/[id]/agents/page.tsx` | Same |
-| `app/app/settings/page.tsx` | Already narrow (max-w-3xl) — minor padding tweaks |
-| `app/app/billing/page.tsx` | Tier cards → stack vertically |
-| `app/pricing/page.tsx` | Tier comparison → horizontal scroll or stacked cards |
-| `app/auth/page.tsx` | Already centered card — minor padding |
-| Shared nav/header component | Mobile hamburger or bottom nav strip |
+**No data model changes** — `AgentTemplate.system_prompt` already exists and is `Optional[str]`.
 
-### Backend (FastAPI)
-- **None** — no backend changes required.
+**No Alembic migration** — no new columns.
+
+### Frontend (Next.js)
+
+**Modified files**
+- `frontend/app/app/agents/page.tsx` — add "Base prompt" collapsible section to each template card.
+- `frontend/lib/api.ts` — add `getMasterPrompts(): Promise<Record<string, string>>`.
+- `frontend/types/index.ts` — add `MasterPrompts` type alias.
 
 ### Data Models
-- **None.**
+- No new tables or columns.
 
-### Dependencies (frontend)
-- `@ducanh2912/next-pwa` — maintained Next.js 14 App Router–compatible PWA wrapper
-- `sharp` (already a Next.js transitive dep) — used optionally for icon generation script
+### Dependencies
+- No new packages. Token counting approximated at 4 chars/token to avoid adding `tiktoken` as a dependency.
 
 ---
 
 ## Out of Scope
-- Push notifications (requires a notification backend and service worker `push` handler — future feature)
-- Background sync / offline write queue (agents require live API calls)
-- React Native or Capacitor wrapper (PWA approach is sufficient)
-- App Store / Play Store submission
-- Offline-capable project creation or agent runs (read-only shell caching only)
-- Dark/light mode toggle (app is dark-only)
-
----
-
-## Open Questions
-- None — scope is well-defined.
+- Summarising conversation history with a second LLM call (too expensive and slow — structured extraction is used instead).
+- Per-agent persistent memory across projects.
+- Streaming the context build step to the frontend.
+- Changing the phase task templates themselves.
+- Editing master prompts from the UI (they are code constants; use the custom system prompt field to extend them).
+- Migrating or updating `system_prompt` on existing user-created AgentTemplate rows in production.

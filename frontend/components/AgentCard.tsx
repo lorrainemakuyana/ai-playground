@@ -19,14 +19,14 @@ export default function AgentCard({ agent, latestOutput, currentTask, isSelected
 
   return (
     <div
-      className={`w-full min-h-[96px] text-left border rounded-lg p-4 cursor-pointer transition-colors duration-150 ${isSelected ? selectedClass : `bg-neutral-900 ${agentBorderClass(agent.status)} hover:bg-neutral-850 hover:border-neutral-700`}`}
+      className={`w-full min-h-[88px] text-left border rounded-xl p-3 sm:p-4 cursor-pointer transition-colors duration-150 ${isSelected ? selectedClass : `bg-neutral-900 ${agentBorderClass(agent.status)} hover:bg-neutral-850 hover:border-neutral-700`}`}
       onClick={() => onClick(agent.id)}
       role="button"
       tabIndex={0}
       onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') onClick(agent.id) }}
     >
       <div className="flex items-center gap-3 mb-2">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold uppercase select-none flex-none ${agentAvatarClass(agent.role)}`}>
+        <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold uppercase select-none flex-none ${agentAvatarClass(agent.role)}`}>
           {getInitials(agent.role)}
         </div>
         <span className="text-sm font-semibold text-neutral-100 flex-1">{agent.specialization || agent.role}</span>

@@ -50,8 +50,8 @@ function PricingContent() {
   }
 
   return (
-    <main className="h-screen overflow-hidden flex flex-col bg-neutral-950 text-neutral-100">
-      <header className="flex-none flex items-center justify-between px-6 py-4 border-b border-neutral-800">
+    <main className="min-h-screen flex flex-col bg-neutral-950 text-neutral-100">
+      <header className="flex-none flex items-center justify-between px-4 sm:px-6 py-4 border-b border-neutral-800">
         <Link href="/" className="text-sm font-semibold text-neutral-200">SDLC Orchestrator</Link>
         {ready && !user && (
           <Link href="/auth" className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors">Log in</Link>
@@ -61,7 +61,7 @@ function PricingContent() {
         )}
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col justify-center mx-auto w-full max-w-5xl px-4 py-6 space-y-6">
+      <div className="flex-1 flex flex-col justify-center mx-auto w-full max-w-5xl px-4 py-8 space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold">Simple, transparent pricing</h1>
           <p className="text-neutral-400">Flexible plans, just for you</p>

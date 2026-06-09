@@ -62,7 +62,7 @@ function AuthPageContent() {
       </div>
 
       {/* Right panel — auth form */}
-      <div className="w-full lg:w-1/2 flex items-center px-12 py-12 pl-40">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12 sm:px-12 lg:px-16">
         <div className="w-full max-w-sm">
           <div className="flex items-center gap-3 mb-10">
             <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center flex-none">

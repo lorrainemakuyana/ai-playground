@@ -271,6 +271,11 @@ async def advance_phase(project_id: str, session: Any) -> SDLCPhase | None:
     if next_phase == SDLCPhase.DONE:
         project.status = ProjectStatus.DONE
 
+    # Invalidate context cache for the new phase — context will be rebuilt
+    # fresh when the first task in the new phase is dispatched.
+    from services.context_builder import invalidate_context_cache
+    invalidate_context_cache(project_id)
+
     tasks_created = await _seed_tasks(project_id, next_phase, session)
 
     await session.commit()
@@ -285,6 +290,12 @@ async def advance_phase(project_id: str, session: Any) -> SDLCPhase | None:
             "payload": {"project_id": project_id, "new_phase": next_phase.value},
         },
     )
+
+    # GitHub integration hooks — fire-and-forget; never block phase progression
+    if next_phase == SDLCPhase.TESTING and current_phase == SDLCPhase.IMPLEMENTATION:
+        asyncio.create_task(_github_auto_push(project, session))
+    elif next_phase == SDLCPhase.DONE:
+        asyncio.create_task(_github_auto_pr(project, session))
 
     await _dispatch_phase_start_tasks(tasks_created, session)
 
@@ -376,10 +387,32 @@ async def dispatch_task(task: Task, session: Any) -> None:
         },
     )
 
-    # Get conversation history and fire background task
+    # Get conversation history and all project tasks for context builder
     history = await agent_runner.get_conversation_history(agent.id, task.project_id, session)
 
+    tasks_result = await session.exec(
+        select(Task).where(Task.project_id == task.project_id).order_by(Task.created_at.asc())
+    )
+    all_project_tasks = tasks_result.all()
+
     # Snapshot objects needed by the background task (avoid session detachment issues)
+    task_snapshots = [
+        Task(
+            id=t.id,
+            project_id=t.project_id,
+            assigned_agent_id=t.assigned_agent_id,
+            phase=t.phase,
+            title=t.title,
+            description=t.description,
+            status=t.status,
+            output=t.output,
+            role=t.role,
+            created_at=t.created_at,
+            updated_at=t.updated_at,
+        )
+        for t in all_project_tasks
+    ]
+
     agent_snapshot = Agent(
         id=agent.id,
         project_id=agent.project_id,
@@ -419,6 +452,7 @@ async def dispatch_task(task: Task, session: Any) -> None:
             history,
             async_session_factory,
             plan=owner_plan,
+            all_tasks=task_snapshots,
         )
     )
     _running_tasks[task.id] = bg
@@ -694,6 +728,83 @@ async def handle_agent_failure(
             "payload": {"message": f"Task '{task.title}' failed: {error}"},
         },
     )
+
+
+async def _github_auto_push(project: Any, session: Any) -> None:
+    """Background task: push implementation content to GitHub after IMPLEMENTATION phase."""
+    import os
+    import services.github_service as gh
+    from database import async_session_factory
+    from sqlmodel import select
+
+    try:
+        async with async_session_factory() as new_session:
+            result = await new_session.exec(
+                select(Project).where(Project.id == project.id)
+            )
+            fresh_project = result.first()
+            if not fresh_project:
+                return
+
+            push_status = await gh.auto_push(fresh_project, new_session)
+
+            fresh_project.github_push_status = push_status
+            if push_status == "failed":
+                fresh_project.github_push_error = "Auto-push failed"
+            else:
+                fresh_project.github_push_error = None
+            new_session.add(fresh_project)
+            await new_session.commit()
+
+            await publish_event(
+                project.id,
+                {
+                    "type": "github_push",
+                    "payload": {"project_id": project.id, "status": push_status},
+                },
+            )
+    except Exception:
+        logger.exception("_github_auto_push failed for project %s", project.id)
+
+
+async def _github_auto_pr(project: Any, session: Any) -> None:
+    """Background task: open a GitHub PR when the project reaches DONE."""
+    import os
+    import services.github_service as gh
+    from database import async_session_factory
+    from sqlmodel import select
+
+    try:
+        async with async_session_factory() as new_session:
+            result = await new_session.exec(
+                select(Project).where(Project.id == project.id)
+            )
+            fresh_project = result.first()
+            if not fresh_project:
+                return
+
+            frontend_url = os.getenv("FRONTEND_URL", "")
+            pr_status, pr_url = await gh.auto_pr(fresh_project, new_session, frontend_url=frontend_url)
+
+            if pr_status == "success" and pr_url:
+                fresh_project.github_pr_url = pr_url
+            fresh_project.github_push_status = pr_status
+            new_session.add(fresh_project)
+            await new_session.commit()
+
+            await publish_event(
+                project.id,
+                {
+                    "type": "github_pr",
+                    "payload": {
+                        "project_id": project.id,
+                        "status": pr_status,
+                        "pr_url": pr_url,
+                    },
+                },
+            )
+    except Exception:
+        logger.exception("_github_auto_pr failed for project %s", project.id)
 
 
 async def stream_events(project_id: str) -> AsyncIterator[str]:

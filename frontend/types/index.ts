@@ -21,6 +21,9 @@ export type ProjectStatus = 'active' | 'paused' | 'done'
 export type PlanTier = 'free' | 'pro' | 'ultra'
 export type Currency = 'GBP' | 'USD'
 
+/** Role → master system prompt text, keyed by AgentRole value strings. */
+export type MasterPrompts = Record<string, string>
+
 export interface CurrentUser {
   id: string
   email: string
@@ -74,6 +77,16 @@ export interface AgentMessage {
   timestamp: string
 }
 
+export type GitHubPushStatus = 'success' | 'skipped' | 'failed'
+
+export interface GitHubStatus {
+  github_repo: string | null
+  github_branch: string | null
+  github_push_status: GitHubPushStatus | null
+  github_push_error: string | null
+  github_pr_url: string | null
+}
+
 export interface Project {
   id: string
   name: string
@@ -85,6 +98,11 @@ export interface Project {
   agents: Agent[]
   tasks: Task[]
   messages: AgentMessage[]
+  github_repo: string | null
+  github_branch: string | null
+  github_push_status: GitHubPushStatus | null
+  github_push_error: string | null
+  github_pr_url: string | null
 }
 
 export interface ProjectSummary {
@@ -130,3 +148,5 @@ export type SSEEvent =
   | { type: 'task_output_chunk'; payload: { task_id: string; chunk: string; reset: boolean } }
   | { type: 'heartbeat';        payload: { timestamp: string } }
   | { type: 'error';            payload: { message: string } }
+  | { type: 'github_push';      payload: { project_id: string; status: GitHubPushStatus } }
+  | { type: 'github_pr';        payload: { project_id: string; status: GitHubPushStatus; pr_url: string } }

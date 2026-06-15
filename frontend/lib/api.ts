@@ -130,6 +130,10 @@ export async function getAgentTemplates() {
   return fetchJSON<import('@/types').AgentTemplate[]>('/agent-templates')
 }
 
+export async function getMasterPrompts() {
+  return fetchJSON<import('@/types').MasterPrompts>('/agent-templates/master-prompts')
+}
+
 export async function createAgentTemplate(data: { role: string; specialization: string; model_name: string; system_prompt?: string | null }) {
   return fetchJSON<import('@/types').AgentTemplate>('/agent-templates', {
     method: 'POST',
@@ -233,6 +237,42 @@ export async function deleteProject(projectId: string): Promise<void> {
 // Current user / plan
 export async function getCurrentUser(): Promise<import('@/types').CurrentUser> {
   return fetchJSON<import('@/types').CurrentUser>('/users/me')
+}
+
+// GitHub integration
+export async function getGitHubTokenStatus(): Promise<{ connected: boolean }> {
+  return fetchJSON<{ connected: boolean }>('/github/token/status')
+}
+
+export async function saveGitHubToken(token: string): Promise<void> {
+  return fetchJSON<void>('/github/token', { method: 'POST', body: JSON.stringify({ token }) })
+}
+
+export async function deleteGitHubToken(): Promise<void> {
+  return fetchJSON<void>('/github/token', { method: 'DELETE' })
+}
+
+export async function linkRepo(
+  projectId: string,
+  github_repo: string | null,
+  github_branch?: string | null,
+): Promise<import('@/types').GitHubStatus> {
+  return fetchJSON<import('@/types').GitHubStatus>(`/projects/${projectId}/github`, {
+    method: 'PATCH',
+    body: JSON.stringify({ github_repo, github_branch }),
+  })
+}
+
+export async function triggerPush(projectId: string): Promise<{ status: string; error: string | null }> {
+  return fetchJSON<{ status: string; error: string | null }>(`/projects/${projectId}/github/push`, {
+    method: 'POST',
+  })
+}
+
+export async function triggerPR(projectId: string): Promise<{ status: string; pr_url: string | null; error: string | null }> {
+  return fetchJSON<{ status: string; pr_url: string | null; error: string | null }>(`/projects/${projectId}/github/pr`, {
+    method: 'POST',
+  })
 }
 
 /**

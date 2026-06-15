@@ -1,7 +1,20 @@
 /** @type {import('next').NextConfig} */
-// Browser requests hit the same-origin `/api/*` path, which this rewrite proxies
-// to the backend. The backend origin is configurable so production deployments
-// can point at their real API host instead of localhost.
+const withPWA = require('@ducanh2912/next-pwa').default({
+  dest: 'public',
+  disable: process.env.NODE_ENV === 'development',
+  workboxOptions: {
+    disableDevLogs: true,
+    runtimeCaching: [
+      {
+        // Workbox matches against the full URL, so don't use a ^ anchor.
+        // This covers all requests whose path starts with /api/.
+        urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+        handler: 'NetworkOnly',
+      },
+    ],
+  },
+})
+
 const API_URL = process.env.API_URL ?? 'http://localhost:8000'
 
 const nextConfig = {
@@ -13,5 +26,19 @@ const nextConfig = {
       },
     ]
   },
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          { key: 'X-Frame-Options', value: 'DENY' },
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy', value: 'camera=(), microphone=()' },
+        ],
+      },
+    ]
+  },
 }
-module.exports = nextConfig
+
+module.exports = withPWA(nextConfig)

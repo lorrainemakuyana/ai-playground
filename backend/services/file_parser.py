@@ -29,7 +29,7 @@ def parse_output(text: str) -> ParsedProject:
 
     for match in _FILE_RE.finditer(text):
         path = os.path.normpath(match.group(1).strip().lstrip("/"))
-        if path.startswith(".."):
+        if path.startswith("..") or os.path.isabs(path):
             continue
         content = match.group(2)
         result.files[path] = content

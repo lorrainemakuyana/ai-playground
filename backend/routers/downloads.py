@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import re
 import zipfile
 from typing import Any
 
@@ -33,6 +34,11 @@ _DOC_PHASES: dict[str, list[SDLCPhase]] = {
 
 def _slug(name: str) -> str:
     return name.lower().replace(" ", "-").replace("/", "-")
+
+
+def _safe_filename(name: str) -> str:
+    slug = re.sub(r'[^\w\-]', '_', name.strip().lower())
+    return slug[:100] or 'project'
 
 
 def _phase_markdown(label: str, tasks: list[Task]) -> str:
@@ -119,7 +125,7 @@ async def download_project_zip(
             zf.writestr(f"docs/{_slug(label)}.md", _phase_markdown(label, phase_tasks))
 
     buf.seek(0)
-    safe = _slug(project.name)
+    safe = _safe_filename(project.name)
     return StreamingResponse(
         buf,
         media_type="application/zip",
@@ -146,7 +152,7 @@ async def download_doc(
         phase_tasks = [t for t in tasks if t.phase == phase]
         sections.append(_phase_markdown(_PHASE_LABEL[phase], phase_tasks))
     content = "\n".join(sections)
-    filename = f"{_slug(project.name)}-{doc_type}.md"
+    filename = f"{_safe_filename(project.name)}-{doc_type}.md"
     return StreamingResponse(
         iter([content.encode()]),
         media_type="text/markdown",

@@ -15,8 +15,10 @@ router = APIRouter()
 
 
 @router.get("/master-prompts", response_model=dict[str, str])
-async def get_master_prompts() -> dict[str, str]:
-    """Return the master system prompt for each agent role (no auth required)."""
+async def get_master_prompts(
+    current_user: User = Depends(get_current_user),
+) -> dict[str, str]:
+    """Return the master system prompt for each agent role."""
     return {role.value: prompt for role, prompt in MASTER_PROMPTS.items()}
 
 

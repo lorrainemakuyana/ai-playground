@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from bootstrap_admin import bootstrap_admin
 from database import init_db
 from rate_limit import limiter
 from routers import projects, agents, tasks, stream, downloads, agent_templates, auth, sharing, users, admin, github
@@ -15,6 +16,7 @@ from routers import projects, agents, tasks, stream, downloads, agent_templates,
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await bootstrap_admin()
     yield
 
 

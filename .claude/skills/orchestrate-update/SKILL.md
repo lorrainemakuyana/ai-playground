@@ -41,6 +41,17 @@ Spawn the necessary subagents in parallel where possible. Pass each agent:
 - Full contents of all relevant artifact files
 - The specific task they need to complete
 
+### Scrum-style collaboration on large directives
+
+If a directive is too big for one agent to deliver in a timely manner — it spans many files or several independent workstreams, or a single agent could not finish it in one focused pass — run it as a **squad** instead of a single agent:
+
+1. **Split** the directive into non-overlapping sub-tasks with clear file/area ownership.
+2. **Designate a coordinator** among the spawned agents to own integration and report back to you.
+3. **Spawn the squad in parallel** (single Agent tool call with all of them). Give each agent its sub-task, the list of teammates and who owns what, and the path to a shared coordination file `.sdlc/<slug>/coordination/<directive-slug>.md` (the coordinator creates it).
+4. **Make them communicate** through that file: claim owned files, publish shared interfaces/types early, raise and answer blockers. Agents may message each other directly to resolve interface questions, then record the decision in the file.
+5. **Completion handshake:** each agent marks its section `DONE`; the coordinator waits for all sub-tasks, verifies they integrate, and reports one consolidated summary back to you (the Tech Lead).
+6. **Only then continue** — do not finish the update until the coordinator reports the squad's work complete. A small directive that fits one agent skips this and is delegated to a single agent as normal.
+
 **Engineer subagent template:**
 ```
 You are a senior Software Engineer updating an existing project.

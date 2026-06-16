@@ -31,17 +31,34 @@ async function fetchJSON<T>(path: string, options?: RequestInit, config?: FetchC
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
 
   const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
+  // Compose our timeout with any caller-supplied signal so the 30s cap always
+  // applies regardless of who aborts first — the timeout guarantee must not
+  // depend on the (unenforced) invariant that no caller passes a signal.
+  const callerSignal = options?.signal
+  if (callerSignal) {
+    if (callerSignal.aborted) controller.abort()
+    else callerSignal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
+  let timedOut = false
+  const timeout = setTimeout(() => {
+    timedOut = true
+    controller.abort()
+  }, REQUEST_TIMEOUT_MS)
 
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
       credentials: 'same-origin',
-      signal: options?.signal ?? controller.signal,
+      signal: controller.signal,
       headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
     })
   } catch {
+    // A fired timeout isn't a connectivity failure — the backend may just be
+    // cold/slow — so give it copy that matches reality.
+    if (timedOut) {
+      throw new ApiError(0, 'The request timed out. Please try again.')
+    }
     throw new ApiError(0, 'Unable to reach the server. Check your connection and try again.')
   } finally {
     clearTimeout(timeout)

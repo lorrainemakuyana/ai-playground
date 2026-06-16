@@ -25,7 +25,7 @@ const withPWA = require('@ducanh2912/next-pwa').default({
     disableDevLogs: true,
     // Auth-gated routes and the API must always hit the network so the cookie /
     // redirect logic runs fresh — never serve them from a navigation fallback.
-    navigateFallbackDenylist: [/^\/api\//, /^\/auth/, /^\/app/],
+    navigateFallbackDenylist: [/^\/api\//, /^\/auth(\/|$)/, /^\/app(\/|$)/],
     runtimeCaching: apiNetworkOnly,
   },
 })

@@ -20,20 +20,31 @@ interface FetchConfig {
   noAuthRedirect?: boolean  // skip the 401 → /auth redirect (for opportunistic probes)
 }
 
+// Cap every request so a stuck connection (e.g. one swallowed by a misbehaving
+// service worker on mobile) surfaces as a recoverable error instead of an
+// infinite spinner. Generous enough to tolerate a backend cold start.
+const REQUEST_TIMEOUT_MS = 30_000
+
 async function fetchJSON<T>(path: string, options?: RequestInit, config?: FetchConfig): Promise<T> {
   // Auth travels in the httponly `auth_token` cookie, which the browser sends
   // automatically on these same-origin /api requests — no Authorization header.
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
   let res: Response
   try {
     res = await fetch(`${API_BASE}${path}`, {
       ...options,
       credentials: 'same-origin',
+      signal: options?.signal ?? controller.signal,
       headers: { ...headers, ...(options?.headers as Record<string, string> ?? {}) },
     })
   } catch {
     throw new ApiError(0, 'Unable to reach the server. Check your connection and try again.')
+  } finally {
+    clearTimeout(timeout)
   }
 
   if (!res.ok) {

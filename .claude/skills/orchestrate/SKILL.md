@@ -23,6 +23,7 @@ Confirm the details with the user before proceeding.
   api-contracts.md
   data-models.md
   implementation/      ← source files from engineers
+  coordination/        ← per-agent squad coordination notes (one file per agent)
   tests/               ← test files from QA
   runbook.md           ← SRE output
   summary.md           ← final summary
@@ -30,7 +31,7 @@ Confirm the details with the user before proceeding.
 
 Where `<project-slug>` is the project name lowercased with spaces replaced by hyphens.
 
-Create this directory structure before spawning any agents.
+Create this directory structure before spawning any agents. Create the `coordination/` directory now so squad agents never hit a missing-directory race later.
 
 ## 3. Run the SDLC pipeline
 
@@ -48,19 +49,16 @@ You are the Tech Lead. Before spawning the agent(s) for a phase, size the work. 
 - It mixes distinct workstreams that a single agent would have to do serially (e.g. backend + frontend, core engine + integrations, data layer + API layer).
 - A single agent could not realistically finish it in one focused pass without truncating or leaving TODOs.
 
+**Runtime constraint — read this first.** Subagents spawned together run in isolation: they cannot discover, message, or block-wait on each other. There is no reliable sibling-to-sibling channel (do not assume `SendMessage` can address a teammate). So all squad coordination is **asynchronous through files**, and the **only** synchronization point is you, the Tech Lead, collecting each agent's returned result. You are the join point.
+
 When a task is too big, run it as a **squad** instead of a single agent:
 
-1. **Split the work.** Break the task into non-overlapping sub-tasks with clear ownership boundaries — each agent owns specific files/areas so two agents never write the same file blindly.
-2. **Designate a squad coordinator.** Pick one of the spawned agents as the coordinator. The coordinator owns integration and reports back to you (the Tech Lead) on behalf of the squad.
-3. **Spawn the squad in parallel.** Spawn all squad agents in a **single Agent tool call with multiple invocations** so they run concurrently. Give each agent: the full upstream context, its specific sub-task, the list of teammates and who owns what, and the path to the shared coordination file (below).
-4. **Make them communicate.** The squad coordinates through a shared coordination file at `.sdlc/<slug>/coordination/<task-slug>.md` — created by the coordinator. Every squad agent must, throughout its work:
-   - Read the coordination file before and during work to stay in sync.
-   - Append a section claiming the files/sub-task it owns, so others avoid conflicts.
-   - Publish any shared interfaces, contracts, or types other agents depend on, as soon as they are decided.
-   - Raise blockers or open questions for teammates, and answer those raised by others.
-   - Agents may also message each other directly (SendMessage) to resolve interface questions in real time, then record the decision in the coordination file so it is not lost.
-5. **Completion handshake.** When an agent finishes its sub-task, it marks its section `DONE` in the coordination file. The coordinator waits until **every** sub-task is `DONE`, verifies the pieces integrate (reading the teammates' files), resolves any conflicts, and then reports a single consolidated completion summary back to the Tech Lead.
-6. **Only then continue.** As Tech Lead, do not advance to the next phase until the coordinator has reported the squad's work complete. A small task that fits one agent skips all of this — spawn a single agent as normal.
+1. **Split the work.** Break the task into non-overlapping sub-tasks with clear ownership boundaries — each agent owns specific files/areas so two agents never write the same file. Define the **interface boundary** between sub-tasks up front (drawn from `api-contracts.md` and `data-models.md`) and write it into each agent's prompt, so agents never need to negotiate a contract mid-flight.
+2. **Pre-create the coordination stubs.** Before spawning, create `.sdlc/<slug>/coordination/` and an empty stub file for **every** squad member (e.g. `engineer-1.md`, `engineer-2.md`). This removes the read-before-create race — every teammate file exists before any agent starts.
+3. **Spawn the squad in parallel.** Spawn all squad agents in a **single Agent tool call with multiple invocations** so they run concurrently. Give each agent: the full upstream context, its specific sub-task, the files/area it owns, the interface boundary, the list of teammates and who owns what, and the path to its own coordination file.
+4. **Coordinate through per-agent files (no shared file).** Each agent writes **only its own** file `.sdlc/<slug>/coordination/<agent>.md` — never a file another agent also writes — so parallel whole-file `Write`s can never clobber each other. In that file the agent records: the files/area it owns, the interfaces/types it exposes for teammates, and any deviation from the plan. Agents **read** teammates' coordination files (and `api-contracts.md` / `data-models.md`) to consume the interfaces they depend on.
+5. **Report by returning.** Each agent's final message is its completion report: what it built, the interfaces it exposed, and any conflicts the Tech Lead should resolve. There is no peer busy-waiting and no `DONE`-polling — an agent simply finishes and returns to you.
+6. **Tech Lead integration pass.** Once **all** squad agents have returned, you collect their results and run a single integration pass: read the implementation and `coordination/*.md` files, verify the pieces fit, and resolve conflicts — either directly, or by re-invoking one engineer with all teammates' results as a focused integration task. Only then advance to the next phase. A small task that fits one agent skips all of this — spawn a single agent as normal.
 
 ---
 
@@ -137,16 +135,17 @@ Wait for completion before continuing.
 
 ### Phase 3 — Implementation (Engineer squad)
 
-Implementation is almost always too big for one agent, so run it as a squad per the **Scrum-style collaboration model** above. Read all previous output files, then spawn the engineers **simultaneously** (single Agent tool call with all of them). Designate **Engineer 1 as the squad coordinator**. Scale the squad to the size of the work — two engineers for a typical project, more if the architecture spans many independent areas.
+Implementation is almost always too big for one agent, so run it as a squad per the **Scrum-style collaboration model** above. First create the per-engineer coordination stubs (`.sdlc/<slug>/coordination/engineer-1.md`, `engineer-2.md`, …). Read all previous output files, then spawn the engineers **simultaneously** (single Agent tool call with all of them). Scale the squad to the size of the work — two engineers for a typical project, more if the architecture spans many independent areas. Define each engineer's file/area ownership and the interface boundary between them (from `api-contracts.md` / `data-models.md`) up front in their prompts.
 
-Tell every engineer to coordinate through `.sdlc/<slug>/coordination/implementation.md` (Engineer 1 creates it first): claim owned files, publish shared interfaces/types early, raise and answer blockers, and mark their section `DONE` when finished.
+Each engineer writes only its own `coordination/<engineer>.md` (publishing the interfaces it exposes), reads teammates' files to consume theirs, and returns a completion summary to you. After **all** engineers return, you (the Tech Lead) run the integration pass before continuing.
 
-**Engineer 1 prompt (squad coordinator):**
+**Engineer 1 prompt (squad member — core):**
 ```
-You are a senior Software Engineer implementing the core features of a project, and the COORDINATOR of the engineering squad.
+You are a senior Software Engineer implementing the core features of a project, working in a squad.
 
 Project: <name>
 Squad: you (Engineer 1, core) + <list teammates and what each owns>
+You own: <files/areas>. Interface boundary: <what you expose to teammates / consume from them>.
 
 ## Requirements
 <requirements.md>
@@ -166,24 +165,26 @@ Squad: you (Engineer 1, core) + <list teammates and what each owns>
 Your job:
 Implement ALL primary features as complete, runnable source files.
 
-Coordination (you are the coordinator):
-- Create `.sdlc/<slug>/coordination/implementation.md` first. List each agent's owned files/areas, a section for shared interfaces/types/contracts, and a blockers/questions section.
-- Publish any interfaces or types your teammates depend on as soon as you decide them. Read the file as you work to stay in sync, and answer teammates' blockers. You may message teammates directly to resolve interface questions, then record the decision in the file.
-- Mark your own section `DONE` when finished. Then WAIT until every teammate's section is `DONE`, verify the pieces integrate (read their files, resolve conflicts), and report ONE consolidated completion summary as your final message so the Tech Lead can continue.
+Coordination (asynchronous, via files — you cannot message or wait on teammates):
+- Write your status ONLY to `.sdlc/<slug>/coordination/engineer-1.md` (already created). Never write a file another agent also writes. Record the files/area you own, the interfaces/types/contracts you expose for teammates, and any deviation from the plan.
+- Read teammates' `.sdlc/<slug>/coordination/*.md` to consume the interfaces they expose. Treat `api-contracts.md` and `data-models.md` as the source of truth for cross-agent contracts so you never need to negotiate mid-flight.
 
 Output every file using the Write tool, saving each to `.sdlc/<slug>/implementation/<relative-path>`.
 
 Include all config files (package.json, requirements.txt, Dockerfile, .env.example, etc.).
 Write complete, production-quality code — no placeholders, no TODOs, no truncation.
 End with a "START COMMAND" section in `.sdlc/<slug>/implementation/README.md` listing exact commands to install and run.
+
+When finished, return a completion summary as your final message: what you built, the interfaces you exposed, and any conflicts the Tech Lead should resolve during integration.
 ```
 
-**Engineer 2 prompt (squad member):**
+**Engineer 2 prompt (squad member — supporting):**
 ```
-You are a senior Software Engineer implementing supporting features and integrations, working in a squad coordinated by Engineer 1.
+You are a senior Software Engineer implementing supporting features and integrations, working in a squad.
 
 Project: <name>
-Squad: Engineer 1 (core, coordinator) + you (Engineer 2, supporting) + <any other teammates>
+Squad: Engineer 1 (core) + you (Engineer 2, supporting) + <any other teammates>
+You own: <files/areas>. Interface boundary: <what you expose to teammates / consume from them>.
 
 ## Requirements
 <requirements.md>
@@ -203,17 +204,18 @@ Squad: Engineer 1 (core, coordinator) + you (Engineer 2, supporting) + <any othe
 Your job:
 Implement ALL supporting features, integrations, and secondary flows not covered by the core implementation.
 
-Coordination:
-- Read `.sdlc/<slug>/coordination/implementation.md` before and during your work. Append a section claiming the files/areas you own so others avoid conflicts.
-- Use the shared interfaces/types Engineer 1 publishes there; raise blockers and answer teammates' questions in that file. You may message teammates directly to resolve interface questions, then record the decision in the file.
-- When finished, mark your section `DONE` in the coordination file, then report your completion to the coordinator (Engineer 1) as your final message.
+Coordination (asynchronous, via files — you cannot message or wait on teammates):
+- Write your status ONLY to `.sdlc/<slug>/coordination/engineer-2.md` (already created). Never write a file another agent also writes. Record the files/area you own, the interfaces you expose, and any deviation from the plan.
+- Read teammates' `.sdlc/<slug>/coordination/*.md` and their implementation files to consume the interfaces they expose. Treat `api-contracts.md` and `data-models.md` as the source of truth for cross-agent contracts.
 
 Output every file using the Write tool to `.sdlc/<slug>/implementation/<relative-path>`.
 If a file already exists from another engineer, extend it rather than replace it (read it first).
 Write complete, production-quality code — no placeholders, no TODOs.
+
+When finished, return a completion summary as your final message: what you built, the interfaces you exposed, and any conflicts the Tech Lead should resolve during integration.
 ```
 
-Wait for the squad coordinator (Engineer 1) to report the consolidated completion before continuing.
+Wait for **all** engineers to return. Then, as Tech Lead, run the integration pass: read the implementation and `coordination/*.md` files, verify the pieces fit together, and resolve any conflicts — directly, or by re-invoking one engineer with all teammates' results as a focused integration task — before continuing.
 
 ---
 

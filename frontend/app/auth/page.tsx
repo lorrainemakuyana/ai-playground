@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { login, register } from '@/lib/api'
 
 export default function AuthPage() {
@@ -15,7 +15,6 @@ export default function AuthPage() {
 }
 
 function AuthPageContent() {
-  const router = useRouter()
   const searchParams = useSearchParams()
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState('')
@@ -46,7 +45,13 @@ function AuthPageContent() {
       }
       const next = searchParams.get('next') ?? '/app'
       const safeNext = next.startsWith('/') && !next.startsWith('//') ? next : '/app'
-      router.push(safeNext)
+      // Hard navigation rather than router.push: the auth cookie was just set on
+      // the fetch response, and a soft client navigation reuses Next.js's Router
+      // Cache (and any stale service-worker-cached RSC for /app), so middleware
+      // never re-evaluates with the new cookie and the user is bounced back to
+      // /auth — notably on mobile/PWA where the service worker persists. A full
+      // document load re-runs middleware with the cookie present.
+      window.location.assign(safeNext)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.')
     } finally {

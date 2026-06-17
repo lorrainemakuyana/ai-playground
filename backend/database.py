@@ -18,18 +18,30 @@ from models.enums import (
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/orchestrator.db")
+_RAW_URL = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///./data/orchestrator.db")
+
+
+def _normalize_url(url: str) -> str:
+    """Ensure the URL uses the correct async driver prefix.
+
+    Render's Postgres connection strings use the bare `postgresql://` scheme.
+    SQLAlchemy needs `postgresql+asyncpg://` for async use.
+    """
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://"):
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
+DATABASE_URL = _normalize_url(_RAW_URL)
+
+_parsed = make_url(DATABASE_URL)
+_is_sqlite = _parsed.get_backend_name() == "sqlite"
 
 
 def _ensure_sqlite_dir(url: str) -> None:
-    """Create the parent directory for a file-based SQLite DB if it's missing.
-
-    On a fresh host (e.g. Render's working dir) the `./data` folder doesn't
-    exist, so SQLite raises "unable to open database file" on first connect.
-    """
     parsed = make_url(url)
-    if parsed.get_backend_name() != "sqlite":
-        return
     db_path = parsed.database
     if not db_path or db_path == ":memory:":
         return
@@ -38,24 +50,27 @@ def _ensure_sqlite_dir(url: str) -> None:
         os.makedirs(parent, exist_ok=True)
 
 
-_ensure_sqlite_dir(DATABASE_URL)
+if _is_sqlite:
+    _ensure_sqlite_dir(DATABASE_URL)
 
 engine = create_async_engine(DATABASE_URL, echo=False)
 
 
-@event.listens_for(engine.sync_engine, "connect")
-def set_sqlite_pragma(dbapi_conn, connection_record):
-    cursor = dbapi_conn.cursor()
-    cursor.execute("PRAGMA journal_mode=WAL")
-    cursor.close()
+if _is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.close()
 
 
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
 
-# Columns added to existing tables. Each ADD COLUMN is expected to fail with a
-# "duplicate column" error on subsequent runs; any other failure is logged.
+# Columns added to existing tables after initial schema creation.
+# On a fresh DB, create_all already includes these — the ALTER TABLEs will
+# fail with "already exists" / "duplicate column", which _migrate ignores.
 _MIGRATIONS = [
     "ALTER TABLE agents ADD COLUMN model_name TEXT NOT NULL DEFAULT 'claude-sonnet-4-6'",
     "ALTER TABLE agents ADD COLUMN is_template_agent INTEGER NOT NULL DEFAULT 0",
@@ -95,9 +110,7 @@ _MIGRATIONS = [
     )""",
 ]
 
-# The default engineering team seeded for each user when they register. Stored
-# as (role enum, specialization, model_name) tuples; the Tech Lead runs on Opus,
-# everyone else on Sonnet.
+# The default engineering team seeded for each user when they register.
 DEFAULT_AGENT_TEAM = [
     {"role": AgentRole.TECH_LEAD,  "specialization": "Tech Lead",           "model_name": "claude-opus-4-8"},
     {"role": AgentRole.ENGINEER_1, "specialization": "Software Engineer 1", "model_name": "claude-sonnet-4-6"},
@@ -108,9 +121,7 @@ DEFAULT_AGENT_TEAM = [
 
 
 # Enum columns are persisted by member *value* (e.g. "tech-lead", "in-progress").
-# Older rows were stored by member *name* ("TECH_LEAD", ...); this backfill
-# rewrites them so reads don't raise LookupError. Idempotent: name != value for
-# every member, so once converted the WHERE clause matches nothing.
+# Older rows stored by member *name* ("TECH_LEAD", ...) are backfilled here.
 _ENUM_COLUMNS = [
     ("users", "plan", PlanTier),
     ("agent_templates", "role", AgentRole),
@@ -124,34 +135,41 @@ _ENUM_COLUMNS = [
 ]
 
 
-async def _migrate_enum_values(conn):
+def _is_column_exists_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "duplicate column" in msg or "already exists" in msg
+
+
+def _is_missing_table_error(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return "no such table" in msg or "does not exist" in msg
+
+
+async def _migrate_enum_values():
     for table, column, enum_cls in _ENUM_COLUMNS:
         for member in enum_cls:
             if member.name == member.value:
                 continue
             try:
-                await conn.execute(
-                    text(f"UPDATE {table} SET {column} = :value WHERE {column} = :name"),
-                    {"value": member.value, "name": member.name},
-                )
-            except Exception as exc:
-                # A missing table on a fresh DB is fine — create_all already ran,
-                # so this only happens if a table legitimately doesn't exist yet.
-                if "no such table" not in str(exc).lower():
-                    logger.warning(
-                        "Enum backfill failed (%s.%s): %s", table, column, exc
+                async with engine.begin() as conn:
+                    await conn.execute(
+                        text(f"UPDATE {table} SET {column} = :value WHERE {column} = :name"),
+                        {"value": member.value, "name": member.name},
                     )
+            except Exception as exc:
+                if not _is_missing_table_error(exc):
+                    logger.warning("Enum backfill failed (%s.%s): %s", table, column, exc)
 
 
-async def _migrate(conn):
+async def _migrate():
     for stmt in _MIGRATIONS:
         try:
-            await conn.execute(text(stmt))
+            async with engine.begin() as conn:
+                await conn.execute(text(stmt))
         except Exception as exc:
-            # ADD COLUMN on an existing column is expected; anything else is logged.
-            if "duplicate column" not in str(exc).lower():
+            if not _is_column_exists_error(exc):
                 logger.warning("Migration step failed (%s): %s", stmt, exc)
-    await _migrate_enum_values(conn)
+    await _migrate_enum_values()
 
 
 async def seed_default_templates_for_user(user_id: str, session) -> None:
@@ -175,7 +193,7 @@ async def seed_default_templates_for_user(user_id: str, session) -> None:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-        await _migrate(conn)
+    await _migrate()
 
 
 async def get_session() -> AsyncSession:

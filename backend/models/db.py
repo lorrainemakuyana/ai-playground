@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional, List
 
-from sqlalchemy import Enum as SAEnum
+from sqlalchemy import DateTime, Enum as SAEnum
 from sqlmodel import SQLModel, Field, Relationship
 
 from models.enums import SDLCPhase, AgentRole, AgentStatus, TaskStatus, ProjectStatus, PlanTier
@@ -28,6 +28,10 @@ _task_status_type = _value_enum(TaskStatus)
 _project_status_type = _value_enum(ProjectStatus)
 _sdlc_phase_type = _value_enum(SDLCPhase)
 
+# All datetime columns use TIMESTAMP WITH TIME ZONE so Postgres/asyncpg
+# accepts timezone-aware datetimes without raising DataError.
+_TZ_DATETIME = DateTime(timezone=True)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
@@ -45,9 +49,9 @@ class User(SQLModel, table=True):
     password_hash: str
     token_version: int = Field(default=1)
     plan: PlanTier = Field(default=PlanTier.FREE, sa_type=_plan_tier_type)
-    plan_expires_at: Optional[datetime] = Field(default=None)
+    plan_expires_at: Optional[datetime] = Field(default=None, sa_type=_TZ_DATETIME)
     github_token_enc: Optional[str] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
 
     projects: List["Project"] = Relationship(back_populates="owner")
     shares: List["ProjectShare"] = Relationship(back_populates="user")
@@ -64,7 +68,7 @@ class AgentTemplate(SQLModel, table=True):
     model_name: str = Field(default="claude-sonnet-4-6")
     system_prompt: Optional[str] = Field(default=None)
     is_active: bool = Field(default=True)
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
 
 
 class Project(SQLModel, table=True):
@@ -75,8 +79,8 @@ class Project(SQLModel, table=True):
     description: str
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, sa_type=_project_status_type)
     current_phase: SDLCPhase = Field(default=SDLCPhase.DISCOVERY, sa_type=_sdlc_phase_type)
-    created_at: datetime = Field(default_factory=_utcnow)
-    archived_at: Optional[datetime] = Field(default=None)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
+    archived_at: Optional[datetime] = Field(default=None, sa_type=_TZ_DATETIME)
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     github_repo: Optional[str] = Field(default=None)
     github_branch: Optional[str] = Field(default=None)
@@ -126,8 +130,8 @@ class Task(SQLModel, table=True):
     status: TaskStatus = Field(default=TaskStatus.PENDING, sa_type=_task_status_type)
     output: Optional[str] = Field(default=None)
     role: Optional[AgentRole] = Field(default=None, sa_type=_agent_role_type)
-    created_at: datetime = Field(default_factory=_utcnow)
-    updated_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
+    updated_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
 
     project: Optional[Project] = Relationship(back_populates="tasks")
     assigned_agent: Optional[Agent] = Relationship(
@@ -147,7 +151,7 @@ class AgentMessage(SQLModel, table=True):
     from_agent_id: str = Field(foreign_key="agents.id")
     to_agent_id: Optional[str] = Field(default=None, foreign_key="agents.id")
     content: str
-    timestamp: datetime = Field(default_factory=_utcnow)
+    timestamp: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
 
     project: Optional[Project] = Relationship(back_populates="messages")
     from_agent: Optional[Agent] = Relationship(
@@ -172,9 +176,9 @@ class ProjectShare(SQLModel, table=True):
     user_id: Optional[str] = Field(default=None, foreign_key="users.id", index=True)
     invited_email: str = Field(index=True)
     invite_method: str = Field(default="email")  # "email" | "link"
-    joined_at: Optional[datetime] = Field(default=None)
-    revoked_at: Optional[datetime] = Field(default=None)
-    created_at: datetime = Field(default_factory=_utcnow)
+    joined_at: Optional[datetime] = Field(default=None, sa_type=_TZ_DATETIME)
+    revoked_at: Optional[datetime] = Field(default=None, sa_type=_TZ_DATETIME)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
 
     project: Optional[Project] = Relationship(back_populates="shares")
     user: Optional[User] = Relationship(back_populates="shares")
@@ -186,7 +190,8 @@ class ProjectShareLink(SQLModel, table=True):
     id: str = Field(default_factory=_new_uuid, primary_key=True)
     project_id: str = Field(foreign_key="projects.id", unique=True, index=True)
     token: str = Field(unique=True, index=True)
-    created_at: datetime = Field(default_factory=_utcnow)
+    created_at: datetime = Field(default_factory=_utcnow, sa_type=_TZ_DATETIME)
     expires_at: Optional[datetime] = Field(
-        default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=30)
+        default_factory=lambda: datetime.now(timezone.utc) + timedelta(days=30),
+        sa_type=_TZ_DATETIME,
     )

@@ -41,6 +41,17 @@ Spawn the necessary subagents in parallel where possible. Pass each agent:
 - Full contents of all relevant artifact files
 - The specific task they need to complete
 
+### Scrum-style collaboration on large directives
+
+If a directive is too big for one agent to deliver in a timely manner — it spans many files or several independent workstreams, or a single agent could not finish it in one focused pass — run it as a **squad** instead of a single agent. Subagents run in isolation (no sibling messaging, no block-waiting on each other), so coordination is **asynchronous through files** and **you, the Tech Lead, are the join point**:
+
+1. **Split** the directive into non-overlapping sub-tasks with clear file/area ownership, and define the interface boundary between them (from `api-contracts.md` / `data-models.md`) up front in each agent's prompt.
+2. **Pre-create the coordination stubs.** Create `.sdlc/<slug>/coordination/` and an empty stub file for every squad member (e.g. `engineer-1.md`, `engineer-2.md`) before spawning, so no agent hits a missing file.
+3. **Spawn the squad in parallel** (single Agent tool call with all of them). Give each agent its sub-task, the files/area it owns, the interface boundary, the list of teammates and who owns what, and the path to its own coordination file.
+4. **Coordinate through per-agent files (no shared file).** Each agent writes only its own `.sdlc/<slug>/coordination/<agent>.md` — recording owned files, exposed interfaces, and deviations — and reads teammates' files to consume theirs. This prevents parallel writes from clobbering each other.
+5. **Report by returning.** Each agent's final message reports what it built, the interfaces it exposed, and any conflicts to resolve. No `DONE`-polling, no peer busy-wait.
+6. **Tech Lead integration pass.** Once **all** agents return, run a single integration pass: verify the pieces fit and resolve conflicts (directly, or by re-invoking one agent with all teammates' results). Only then finish the update. A small directive that fits one agent skips this and is delegated to a single agent as normal.
+
 **Engineer subagent template:**
 ```
 You are a senior Software Engineer updating an existing project.

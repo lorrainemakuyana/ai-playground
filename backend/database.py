@@ -145,29 +145,31 @@ def _is_missing_table_error(exc: Exception) -> bool:
     return "no such table" in msg or "does not exist" in msg
 
 
-async def _migrate_enum_values(conn):
+async def _migrate_enum_values():
     for table, column, enum_cls in _ENUM_COLUMNS:
         for member in enum_cls:
             if member.name == member.value:
                 continue
             try:
-                await conn.execute(
-                    text(f"UPDATE {table} SET {column} = :value WHERE {column} = :name"),
-                    {"value": member.value, "name": member.name},
-                )
+                async with engine.begin() as conn:
+                    await conn.execute(
+                        text(f"UPDATE {table} SET {column} = :value WHERE {column} = :name"),
+                        {"value": member.value, "name": member.name},
+                    )
             except Exception as exc:
                 if not _is_missing_table_error(exc):
                     logger.warning("Enum backfill failed (%s.%s): %s", table, column, exc)
 
 
-async def _migrate(conn):
+async def _migrate():
     for stmt in _MIGRATIONS:
         try:
-            await conn.execute(text(stmt))
+            async with engine.begin() as conn:
+                await conn.execute(text(stmt))
         except Exception as exc:
             if not _is_column_exists_error(exc):
                 logger.warning("Migration step failed (%s): %s", stmt, exc)
-    await _migrate_enum_values(conn)
+    await _migrate_enum_values()
 
 
 async def seed_default_templates_for_user(user_id: str, session) -> None:
@@ -191,7 +193,7 @@ async def seed_default_templates_for_user(user_id: str, session) -> None:
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
-        await _migrate(conn)
+    await _migrate()
 
 
 async def get_session() -> AsyncSession:
